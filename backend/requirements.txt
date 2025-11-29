@@ -1,0 +1,16 @@
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+dropbox==11.36.2
+qrcode[pil]==7.4.2
+PyPDF2==3.0.1
+pdfplumber==0.10.3
+Pillow==10.1.0
+pytesseract==0.3.10
+pyzbar==0.1.9
+opencv-python==4.8.1.78
+numpy>=1.26.0
+pydantic-settings==2.1.0
+python-jose[cryptography]==3.3.0
+pdf2image==1.16.3
+
