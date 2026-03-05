@@ -5,11 +5,12 @@
 ### Backend (Python FastAPI)
 
 1. **File Upload System**
-   - ✅ Single file upload endpoint
+   - ✅ SAS-based upload (frontend uploads directly to Azure)
    - ✅ Multiple file upload endpoint
    - ✅ 20MB file size limit
    - ✅ PDF, JPG, PNG support
-   - ✅ Dropbox integration with expiring links (24 hours)
+   - ✅ Azure Blob Storage with private containers
+   - ✅ Two-phase upload: request SAS → upload → verify
 
 2. **Document Processing**
    - ✅ PDF parsing (PyPDF2, pdfplumber)
@@ -30,10 +31,11 @@
    - ✅ Confidence scoring
 
 4. **QR Code System**
-   - ✅ QR code generation with metadata
+   - ✅ QR code generation with SAS URLs (30-60 second expiry)
    - ✅ QR code image download
-   - ✅ QR code scanning endpoint
-   - ✅ Expiring download links
+   - ✅ QR scanner opens SAS URL directly
+   - ✅ No metadata in QR codes (only temporary access token)
+   - ✅ Graceful handling of expired SAS (403 errors)
 
 5. **Database**
    - ✅ SQLite database setup
@@ -50,7 +52,10 @@
 7. **Security**
    - ✅ Bearer token authentication
    - ✅ CORS configuration
-   - ✅ Token verification on all endpoints
+   - ✅ TAS-based access (credentials never exposed)
+   - ✅ Private Azure containers (no public access)
+   - ✅ Document lifecycle: incoming → verified → deleted
+   - ✅ Short-lived QR access tokens (30-60 seconds)oints
    - ✅ Secure file storage in Dropbox
 
 ### Frontend (React)

@@ -11,8 +11,8 @@ function Navbar() {
     <nav className="navbar">
       <div className="navbar-container">
          <Link to="/dashboard" className="navbar-logo">
-          <img src="/logo.webp" alt="VeriQuick" className="logo-img" />
-          <span>VeriQuick</span>
+          <img src="/logo.webp" alt="Dectra" className="logo-img" />
+          <span>Dectra</span>
         </Link>
         <div className="navbar-menu">
           <Link

@@ -5,21 +5,31 @@ A comprehensive full-stack application for document upload, QR code generation, 
 ## 🚀 Features
 
 - **Document Upload**: Upload PDF or image documents (Aadhaar, PAN, or any ID)
-- **Dropbox Integration**: Secure cloud storage with expiring download links
-- **QR Code Generation**: Generate unique QR codes for each document
+- **Azure Blob Storage**: Secure cloud storage with SAS-based temporary access
+- **QR Code Generation**: Generate QR codes with short-lived access tokens (30-60 seconds)
 - **QR Scanner**: Scan QR codes using webcam to access documents
 - **Metadata Extraction**: Automatic extraction of name, DOB, PAN/Aadhaar numbers
 - **Document Validation**: PAN checksum validation, Aadhaar QR validation
+- **Verification Lifecycle**: Documents move from incoming → verified after validation
 - **Admin Panel**: Manage files, view scan logs, delete documents
 - **Multi-file Upload**: Upload multiple documents at once
-- **Sound Effects**: Audio feedback for upload, scan success, and errors
+- **Direct Upload**: Frontend uploads directly to Azure (no backend file streaming)
+
+## 🔒 Why SAS Instead of Public Links?
+
+**Security by Design:**
+- **No Public Access**: Containers are private; only SAS tokens grant temporary access
+- **Time-Limited**: QR codes contain 30-60 second SAS URLs, not permanent links
+- **Credential Isolation**: Azure credentials never leave the backend
+- **Immediate Expiry**: Documents can be deleted after first access
+- **No Metadata Leakage**: QR codes contain only access tokens, not document data
 
 ## 📋 Prerequisites
 
 - Python 3.10+
 - Node.js 18+
 - npm or yarn
-- Dropbox account with access token
+- Azure Storage Account with access key
 - Tesseract OCR (for image text extraction)
 
 ### Installing Tesseract
@@ -65,8 +75,11 @@ pip install -r requirements.txt
 # Create .env file
 cp .env.example .env
 
-# Edit .env and add your Dropbox access token
-# DROPBOX_ACCESS_TOKEN=your_token_here
+# Edit .env and add your Azure Storage credentials
+# AZURE_STORAGE_ACCOUNT_NAME=your_account_name
+# AZURE_STORAGE_ACCOUNT_KEY=your_account_key
+# AZURE_STORAGE_CONTAINER_INCOMING=incoming-docs
+# AZURE_STORAGE_CONTAINER_VERIFIED=verified-docs
 # API_TOKEN=your_secret_token_here
 ```
 
@@ -163,12 +176,14 @@ ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
 
 ### Frontend Configuration
 
-Update API token in:
-- `frontend/src/pages/UploadPage.jsx`
-- `frontend/src/pages/ScannerPage.jsx`
-- `frontend/src/pages/AdminPage.jsx`
+Set environment variables for the frontend (recommended) in `frontend/.env.local`:
 
-Change the `API_TOKEN` constant to match your backend token.
+```env
+VITE_API_URL=http://localhost:8000
+VITE_API_TOKEN=your_secret_token_here
+```
+
+These must match the backend `API_TOKEN` (see `backend/.env`).
 
 ### Admin Password
 

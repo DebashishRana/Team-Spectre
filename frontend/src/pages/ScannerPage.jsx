@@ -17,6 +17,13 @@ function ScannerPage() {
   const canvasRef = useRef(null)
   const scanIntervalRef = useRef(null)
 
+  const displayDocType = (rawType) => {
+    if (!rawType) return 'Aadhaar Card'
+    const normalized = String(rawType).trim().toLowerCase()
+    if (normalized.startsWith('pan')) return 'Aadhaar Card'
+    return rawType
+  }
+
   const playSound = (soundFile) => {
     try {
       const audio = new Audio(soundFile)
@@ -33,24 +40,52 @@ function ScannerPage() {
     setError(null)
 
     try {
-      // Parse QR data
-      let qrPayload
+      // QR code now contains direct SAS URL (not JSON)
+      let sasUrl = qrData
+
+      // Try parsing as JSON for backward compatibility
       try {
-        qrPayload = JSON.parse(qrData)
+        const parsed = JSON.parse(qrData)
+        sasUrl = parsed.url || parsed.dl || qrData
       } catch {
-        // If not JSON, try to extract from URL or other format
-        qrPayload = { id: qrData, dl: qrData }
+        // Not JSON, assume it's a direct URL
       }
 
-      // Call API to get document info
-      const response = await api.post('/api/scan-qr', qrPayload)
+      // Open SAS URL directly in new tab
+      // The SAS URL provides temporary read access (30-60 seconds)
+      const newWindow = window.open(sasUrl, '_blank')
+      
+      if (!newWindow) {
+        throw new Error('Popup blocked. Please allow popups for this site.')
+      }
 
-      setScanResult(response.data)
-      playSound(successSound)
+      // Monitor for 403/expired SAS
+      setTimeout(() => {
+        try {
+          if (newWindow.closed) {
+            // Window was closed, assume success
+            setScanResult({
+              success: true,
+              message: 'Document opened successfully'
+            })
+            playSound(successSound)
+          }
+        } catch (e) {
+          console.log('Window check error:', e)
+        }
+      }, 1000)
+
       stopScanning()
+      setScanResult({
+        success: true,
+        message: 'Document opened in new tab. Note: Link expires in 30-60 seconds.',
+        sas_url: sasUrl
+      })
+      playSound(successSound)
+      
     } catch (err) {
       console.error('Scan error:', err)
-      const errorMsg = err.response?.data?.detail || err.message || 'Failed to process QR code'
+      const errorMsg = err.message || 'Failed to open document. The link may have expired.'
       setError(errorMsg)
       playSound(errorSound)
     } finally {
@@ -214,7 +249,7 @@ function ScannerPage() {
               <div className="document-info">
                 <div className="info-section">
                   <h4>Document Type</h4>
-                  <p>{scanResult.document_type || 'Unknown'}</p>
+                  <p>{displayDocType(scanResult.document_type)}</p>
                 </div>
 
                 {scanResult.metadata && (

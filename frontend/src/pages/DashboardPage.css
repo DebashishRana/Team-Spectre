@@ -247,6 +247,20 @@
   gap: 1rem;
 }
 
+.upload-progress {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.upload-progress-text {
+  margin: 0 0 0.5rem 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
 .result-mini-card {
   display: flex;
   gap: 1rem;
@@ -271,6 +285,12 @@
   font-weight: 500;
   color: #1a1a1a;
   margin: 0 0 0.5rem 0;
+}
+
+.result-mini-doc-type {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.85rem;
+  color: #374151;
 }
 
 .download-qr-btn {

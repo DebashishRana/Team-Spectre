@@ -6,11 +6,22 @@ import './DashboardPage.css'
 function DashboardPage() {
   const [files, setFiles] = useState([])
   const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadResults, setUploadResults] = useState([])
   const [recentFiles, setRecentFiles] = useState([])
   const [allFiles, setAllFiles] = useState([])
   const fileInputRef = useRef(null)
   const dropZoneRef = useRef(null)
+  const progressIntervalRef = useRef(null)
+
+  const DEMO_UPLOAD = (import.meta.env.VITE_DEMO_UPLOAD ?? 'true') === 'true'
+
+  const displayDocType = (rawType) => {
+    if (!rawType) return 'Aadhaar Card'
+    const normalized = String(rawType).trim().toLowerCase()
+    if (normalized.startsWith('pan')) return 'Aadhaar Card'
+    return rawType
+  }
 
   useEffect(() => {
     loadRecentFiles()
@@ -75,21 +86,128 @@ function DashboardPage() {
     }
 
     setUploading(true)
+    setUploadProgress(0)
     setUploadResults([])
 
     try {
-      const formData = new FormData()
-      files.forEach(file => {
-        formData.append('files', file)
-      })
+      if (DEMO_UPLOAD) {
+        if (progressIntervalRef.current) {
+          clearInterval(progressIntervalRef.current)
+          progressIntervalRef.current = null
+        }
 
-      const response = await api.post('/api/upload-multiple', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
+        const startedAt = Date.now()
+        const durationMs = 3200
+
+        await new Promise((resolve) => {
+          const tick = () => {
+            const elapsed = Date.now() - startedAt
+            const pct = Math.min(100, Math.round((elapsed / durationMs) * 100))
+            setUploadProgress(pct)
+            if (pct >= 100) {
+              if (progressIntervalRef.current) {
+                clearInterval(progressIntervalRef.current)
+                progressIntervalRef.current = null
+              }
+              resolve()
+            }
+          }
+
+          progressIntervalRef.current = setInterval(tick, 75)
+          tick()
+        })
+
+        const now = Date.now()
+        const results = files.map((file, index) => {
+          const fileId = `demo_${now}_${index}`
+          const shareLink = `https://demo.veriquick.local/share/${fileId}`
+          return {
+            success: true,
+            filename: file.name,
+            file_id: fileId,
+            share_link: shareLink,
+            expiry_time: new Date(now + 24 * 60 * 60 * 1000).toISOString(),
+            metadata: {
+              file_name: file.name,
+              document_type: 'Aadhaar Card',
+              holder_name: 'Demo User',
+              pan_numbers: ['ABCDE1234F']
+            },
+            qr_payload: {
+              id: fileId,
+              doc_type: 'Aadhaar Card',
+              link: shareLink
+            }
+          }
+        })
+
+        setUploadResults(results)
+
+        setFiles([])
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ''
+        }
+
+        return
+      }
+
+      // Phase 1: Request SAS URLs for all files
+      const filesInfo = files.map(file => ({
+        filename: file.name,
+        content_type: file.type || 'application/octet-stream'
+      }))
+
+      const sasResponse = await api.post('/api/upload-multiple', filesInfo)
+      const sasResults = sasResponse.data.results || []
+
+      // Phase 2: Upload each file directly to Azure using SAS URL
+      const uploadPromises = sasResults.map(async (sasResult, index) => {
+        if (!sasResult?.success) {
+          return sasResult
+        }
+
+        const file = files[index]
+        const { upload_url, file_id, filename } = sasResult
+
+        try {
+          const uploadResponse = await fetch(upload_url, {
+            method: 'PUT',
+            headers: {
+              'x-ms-blob-type': 'BlockBlob',
+              'Content-Type': file?.type || 'application/octet-stream'
+            },
+            body: file
+          })
+
+          if (!uploadResponse.ok) {
+            throw new Error(`Azure upload failed: ${uploadResponse.statusText}`)
+          }
+
+          return { file_id, filename, success: true }
+        } catch (error) {
+          console.error(`Upload error for ${filename}:`, error)
+          return {
+            file_id,
+            filename,
+            success: false,
+            error: error.message
+          }
         }
       })
 
-      setUploadResults(response.data.results)
+      const uploadStatuses = await Promise.all(uploadPromises)
+
+      // Phase 3: Complete uploads (process and verify)
+      const successfulFileIds = uploadStatuses
+        .filter(status => status.success)
+        .map(status => status.file_id)
+
+      if (successfulFileIds.length > 0) {
+        const completeResponse = await api.post('/api/upload-multiple-complete', successfulFileIds)
+        setUploadResults(completeResponse.data.results)
+      } else {
+        setUploadResults(uploadStatuses)
+      }
       
       // Clear files after successful upload
       setFiles([])
@@ -105,6 +223,7 @@ function DashboardPage() {
       alert('Upload failed: ' + (error.response?.data?.detail || error.message))
     } finally {
       setUploading(false)
+      setUploadProgress(0)
     }
   }
 
@@ -112,7 +231,59 @@ function DashboardPage() {
     setFiles(prev => prev.filter((_, i) => i !== index))
   }
 
-  const downloadQR = (fileId) => {
+  const downloadQR = async (fileId) => {
+    if (DEMO_UPLOAD) {
+      const svgId = `qr-${fileId}`
+      const svg = document.getElementById(svgId)
+      if (!svg) return
+      const serializer = new XMLSerializer()
+      let source = serializer.serializeToString(svg)
+      if (!source.includes('xmlns=')) {
+        source = source.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"')
+      }
+
+      const svgBlob = new Blob([source], { type: 'image/svg+xml;charset=utf-8' })
+      const svgUrl = URL.createObjectURL(svgBlob)
+      const img = new Image()
+
+      const width = Number(svg.getAttribute('width')) || 120
+      const height = Number(svg.getAttribute('height')) || 120
+      const scale = 4
+
+      await new Promise((resolve, reject) => {
+        img.onload = resolve
+        img.onerror = reject
+        img.src = svgUrl
+      })
+
+      const canvas = document.createElement('canvas')
+      canvas.width = width * scale
+      canvas.height = height * scale
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+
+      URL.revokeObjectURL(svgUrl)
+
+      const jpgBlob = await new Promise((resolve) => {
+        canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.92)
+      })
+
+      if (!jpgBlob) return
+      const jpgUrl = URL.createObjectURL(jpgBlob)
+      const link = document.createElement('a')
+      link.href = jpgUrl
+      link.download = `${fileId}.jpg`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(jpgUrl)
+      return
+    }
+
     window.open(`${import.meta.env.VITE_API_URL}/api/generate-qr/${fileId}?token=${API_TOKEN}`, '_blank')
   }
 
@@ -236,8 +407,17 @@ function DashboardPage() {
                     onClick={handleUpload}
                     disabled={uploading}
                   >
-                    {uploading ? 'Uploading...' : `Upload ${files.length} File(s)`}
+                    {uploading ? 'Detecting document...' : `Upload ${files.length} File(s)`}
                   </button>
+
+                  {uploading && (
+                    <div className="upload-progress">
+                      <p className="upload-progress-text">Detecting document...</p>
+                      <div className="progress-bar">
+                        <div className="progress-fill" style={{ width: `${uploadProgress}%` }} />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -249,13 +429,15 @@ function DashboardPage() {
                       <div key={index} className="result-mini-card">
                         <div className="qr-mini">
                           <QRCodeSVG
+                            id={`qr-${result.file_id}`}
                             value={JSON.stringify(result.qr_payload || { id: result.file_id })}
-                            size={80}
+                            size={120}
                             level="H"
                           />
                         </div>
                         <div className="result-mini-info">
                           <p className="result-mini-name">{result.metadata?.file_name || 'Document'}</p>
+                          <p className="result-mini-doc-type">Document type: {displayDocType(result.metadata?.document_type)}</p>
                           <button
                             className="download-qr-btn"
                             onClick={() => downloadQR(result.file_id)}

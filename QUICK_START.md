@@ -91,6 +91,13 @@ Frontend runs on: http://localhost:3000
 - Delete `node_modules` and run `npm install` again
 - Check `frontend/.env.local` exists
 
+### Upload shows demo results / doesn't hit backend
+- Ensure your frontend env has correct backend connection values:
+  - `VITE_API_URL` (example: `http://localhost:8000`)
+  - `VITE_API_TOKEN` (must match backend `API_TOKEN`)
+
+This project no longer ships with a demo upload mode; uploads always use the real backend + Azure SAS flow.
+
 ### Camera not working
 - Grant browser permissions
 - Use Chrome or Edge (best support)

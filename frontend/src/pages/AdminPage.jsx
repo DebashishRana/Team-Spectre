@@ -12,6 +12,13 @@ function AdminPage() {
 
   const ADMIN_PASSWORD = 'admin123' // Change this in production
 
+  const displayDocType = (rawType) => {
+    if (!rawType) return 'Aadhaar Card'
+    const normalized = String(rawType).trim().toLowerCase()
+    if (normalized.startsWith('pan')) return 'Aadhaar Card'
+    return rawType
+  }
+
   const handleLogin = (e) => {
     e.preventDefault()
     if (password === ADMIN_PASSWORD) {
@@ -149,7 +156,7 @@ function AdminPage() {
                             <td className="file-id">{file.id.substring(0, 8)}...</td>
                             <td>{file.filename}</td>
                             <td>
-                              <span className="type-badge">{file.document_type}</span>
+                              <span className="type-badge">{displayDocType(file.document_type)}</span>
                             </td>
                             <td>{formatDate(file.created_at)}</td>
                             <td>{formatDate(file.expiry_time)}</td>
