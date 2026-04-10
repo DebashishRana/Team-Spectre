@@ -23,10 +23,14 @@ import io
 from pathlib import Path
 
 from document_processor import DocumentProcessor
+from document_classifier import DocumentClassifier
 from validators import DocumentValidator
 from config import settings
 from azure_storage import get_azure_storage
-
+from cloud_sql.db import get_db, UserAccount, init_cloud_sql_db
+from cloud_sql.models import AuthRequest
+from sqlalchemy.orm import Session
+import logging
 
 LEGACY_DEV_TOKEN = "Unified Identity portal-secret-token-change-in-productio"
 
@@ -63,6 +67,7 @@ def get_storage():
 # Initialize processors
 doc_processor = DocumentProcessor()
 validator = DocumentValidator()
+document_classifier = DocumentClassifier()
 
 # Database setup
 DB_PATH = "Unified Identity portal.db"
@@ -118,6 +123,7 @@ def init_db():
     conn.close()
 
 init_db()
+init_cloud_sql_db()
 
 
 # Pydantic models for request validation
@@ -154,6 +160,46 @@ app.middleware_stack = None
 async def root():
     return {"message": "Unified Identity portal API", "version": "1.0.0"}
 
+@app.post("/api/auth/register")
+async def register_user(request: AuthRequest, db: Session = Depends(get_db)):
+    if not db:
+        raise HTTPException(status_code=500, detail="Database connection failed")
+    
+    existing_user = db.query(UserAccount).filter(UserAccount.email == request.email).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+        
+    hashed_password = request.password # Use proper hashing in prod
+    
+    new_user = UserAccount(
+        email=request.email,
+        password_hash=hashed_password,
+        username=request.username,
+        country=request.country,
+        receive_updates=request.receive_updates
+    )
+    
+    try:
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        return {"success": True, "message": "User registered successfully", "user_id": new_user.id}
+    except Exception as e:
+        db.rollback()
+        logging.error(f"Error registering user: {e}")
+        raise HTTPException(status_code=500, detail="Failed to register user")
+
+@app.post("/api/auth/login")
+async def login_user(request: AuthRequest, db: Session = Depends(get_db)):
+    if not db:
+        raise HTTPException(status_code=500, detail="Database connection failed")
+        
+    user = db.query(UserAccount).filter(UserAccount.email == request.email).first()
+    if not user or user.password_hash != request.password: # Should verify against hashed password
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+        
+    return {"success": True, "message": "Login successful", "user_id": user.id, "email": user.email}
+
 from cloud_sql.aadhaar_ocr import extract_aadhaar_details
 import tempfile
 import shutil
@@ -166,12 +212,37 @@ async def extract_aadhaar_endpoint(file: UploadFile = File(...)):
         tmp_path = tmp.name
     
     try:
-        # Process the image via OCR
+        classification = document_classifier.classify_image_path(tmp_path)
+        print(f"[DEBUG] Classification result: {classification}")
+
+        # Process the image via OCR regardless of classifier result
         result = extract_aadhaar_details(tmp_path)
+        print(f"[DEBUG] OCR result type: {type(result)}, value: {result}")
+        
+        # Handle OCR errors
+        if isinstance(result, str) or isinstance(result, dict) and 'error' in result:
+            print(f"[DEBUG] OCR failed: {result}")
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "message": f"OCR extraction failed: {result}",
+                    "classification": classification,
+                },
+            )
+
+        # Optional second-layer validation using existing validator.
+        validation = validator.validate_document(result, "Aadhaar")
+        print(f"[DEBUG] Validation result: {validation}")
+        
     finally:
         os.remove(tmp_path)
         
-    return {"status": "success", "data": result}
+    return {
+        "status": "success",
+        "classification": classification,
+        "validation": validation,
+        "data": result,
+    }
 
 @app.post("/api/upload")
 async def request_upload_sas(

@@ -12,11 +12,40 @@ function AuthPage() {
   const [showWhatsIncluded, setShowWhatsIncluded] = useState(false)
   const navigate = useNavigate()
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    // For now, just navigate to dashboard
-    // In production, you'd handle authentication here
-    navigate('/dashboard')
+    
+    // Call the corresponding backend endpoint
+    const url = isLogin ? 'http://localhost:8000/api/auth/login' : 'http://localhost:8000/api/auth/register';
+    
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer veriquickx-secret-token-change-in-production'
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          username: isLogin ? undefined : username,
+          country: isLogin ? undefined : country,
+          receive_updates: isLogin ? false : receiveUpdates
+        })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        console.log('Authentication successful:', data);
+        navigate('/dashboard');
+      } else {
+        alert('Authentication failed: ' + (data.detail || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error during authentication:', error);
+      alert('Error connecting to authentication service.');
+    }
   }
 
   const handleGoogleSignIn = () => {
@@ -52,7 +81,7 @@ function AuthPage() {
       {/* Left Side - Dark Section */}
       <div className="auth-left">
         <div className="auth-left-content">
-          <h1 className="auth-left-title">Proof first profit later</h1>
+          <h1 className="auth-left-title">Unified Portal for Identity and governance </h1>
           <p className="auth-left-subtitle">
             Explore Unified Identity portal's core features for individuals and organizations.
           </p>

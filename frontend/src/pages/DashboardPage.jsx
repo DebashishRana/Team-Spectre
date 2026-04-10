@@ -12,6 +12,9 @@ function DashboardPage() {
 
   const [ocrLoading, setOcrLoading] = useState(false);
   const [ocrData, setOcrData] = useState(null);
+  const [ocrError, setOcrError] = useState('');
+  const [ocrClassification, setOcrClassification] = useState(null);
+  const [ocrValidation, setOcrValidation] = useState(null);
   const fileInputRef = useRef(null);
 
   const handleDigiUpload = async (e) => {
@@ -20,6 +23,9 @@ function DashboardPage() {
 
     setOcrLoading(true);
     setOcrData(null);
+    setOcrError('');
+    setOcrClassification(null);
+    setOcrValidation(null);
 
     const formData = new FormData();
     formData.append('file', file);
@@ -31,14 +37,22 @@ function DashboardPage() {
         body: formData
       });
       const data = await response.json();
-      if (data.status === 'success') {
+      if (response.ok && data.status === 'success') {
+        setOcrClassification(data.classification || null);
+        setOcrValidation(data.validation || null);
         setOcrData(data.data);
       } else {
-        alert('Failed to extract data: ' + data.detail);
+        const detail = data?.detail;
+        const message = typeof detail === 'string'
+          ? detail
+          : detail?.message || 'Uploaded document did not pass Aadhaar validation';
+        setOcrClassification(detail?.classification || null);
+        setOcrValidation(detail?.validation || null);
+        setOcrError(message);
       }
     } catch (err) {
       console.error(err);
-      alert('Network error connecting to API');
+      setOcrError('Network error connecting to API');
     } finally {
       setOcrLoading(false);
     }
@@ -145,14 +159,74 @@ function DashboardPage() {
 
       {ocrData && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: '#fff', padding: '2rem', borderRadius: '8px', minWidth: '300px' }}>
-            <h2>Extracted Aadhaar Details</h2>
-            <p><strong>Name:</strong> {ocrData.name || 'Not Found'}</p>
-            <p><strong>DOB:</strong> {ocrData.dob || 'Not Found'}</p>
-            <p><strong>Address:</strong> {ocrData.address || 'Not Found'}</p>
-            <p><strong>Marital Status:</strong> {ocrData.marital_status || 'Not Found'}</p>
-            <button onClick={closeOcrModal} style={{ marginTop: '1rem', padding: '0.5rem 1rem' }}>Close</button>
+          <div style={{ background: '#fff', padding: '2rem', borderRadius: '8px', minWidth: '400px', maxHeight: '80vh', overflowY: 'auto' }}>
+            <h2 style={{ marginBottom: '1.5rem', color: '#333' }}>Aadhaar Extraction Results</h2>
+            
+            {ocrClassification && (
+              <div style={{ background: '#e3f2fd', border: '1px solid #90caf9', borderRadius: '6px', padding: '1rem', marginBottom: '1rem' }}>
+                <p style={{ margin: '0 0 0.5rem 0', fontWeight: '600' }}>
+                  ✓ Classification: {ocrClassification.label}
+                </p>
+                <p style={{ margin: 0, fontSize: '14px', color: '#555' }}>
+                  Confidence: {(ocrClassification.confidence * 100).toFixed(1)}% (Threshold: {(ocrClassification.threshold * 100).toFixed(0)}%)
+                </p>
+              </div>
+            )}
+            
+            {ocrValidation && (
+              <div style={{ background: ocrValidation.status === 'valid' ? '#f1f8e9' : '#ffe0e0', border: `1px solid ${ocrValidation.status === 'valid' ? '#c5e1a5' : '#ffcdd2'}`, borderRadius: '6px', padding: '1rem', marginBottom: '1rem' }}>
+                <p style={{ margin: '0 0 0.5rem 0', fontWeight: '600' }}>
+                  {ocrValidation.status === 'valid' ? '✓' : '⚠'} Validation: {ocrValidation.status}
+                </p>
+                <p style={{ margin: 0, fontSize: '14px', color: '#555' }}>
+                  Confidence: {(ocrValidation.confidence * 100).toFixed(1)}% - {ocrValidation.reason}
+                </p>
+              </div>
+            )}
+            
+            <div style={{ marginBottom: '1rem' }}>
+              <p style={{ margin: '0.5rem 0', borderBottom: '1px solid #eee', paddingBottom: '0.5rem', color: '#000' }}>
+                <strong>Aadhaar Number:</strong> {ocrData.aadhaar_numbers?.[0] || 'Not Found'}
+              </p>
+              <p style={{ margin: '0.5rem 0', borderBottom: '1px solid #eee', paddingBottom: '0.5rem', color: '#000' }}>
+                <strong>Date of Birth:</strong> {ocrData.date_of_birth || 'Not Found'}
+              </p>
+              <p style={{ margin: '0.5rem 0', borderBottom: '1px solid #eee', paddingBottom: '0.5rem', color: '#000' }}>
+                <strong>Address:</strong> {ocrData.address || 'Not Found'}
+              </p>
+              <p style={{ margin: '0.5rem 0', paddingBottom: '0.5rem', color: '#000' }}>
+                <strong>Marital Status:</strong> {ocrData.marital_status || 'Not Found'}
+              </p>
+            </div>
+            
+            <button 
+              onClick={closeOcrModal} 
+              style={{ 
+                marginTop: '1rem', 
+                padding: '0.75rem 1.5rem', 
+                background: '#4285f4', 
+                color: '#fff', 
+                border: 'none', 
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '600'
+              }}
+            >
+              Close
+            </button>
           </div>
+        </div>
+      )}
+
+      {ocrError && (
+        <div style={{ marginTop: '12px', background: '#fff1f0', color: '#8a1c1c', border: '1px solid #ffd2d2', borderRadius: '10px', padding: '10px 12px' }}>
+          <strong>Upload blocked:</strong> {ocrError}
+          {ocrClassification && (
+            <div style={{ marginTop: '6px', fontSize: '13px' }}>
+              Classifier result: {ocrClassification.label} ({(ocrClassification.confidence * 100).toFixed(1)}%)
+            </div>
+          )}
         </div>
       )}
 

@@ -149,9 +149,9 @@ class DocumentValidator:
         if metadata.get("date_of_birth"):
             confidence += 0.1
         
-        if confidence >= 0.7:
+        if confidence >= 0.5:
             status = "valid"
-        elif confidence >= 0.4:
+        elif confidence >= 0.3:
             status = "partial"
         else:
             status = "invalid"

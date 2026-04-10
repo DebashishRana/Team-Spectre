@@ -36,6 +36,18 @@ class Settings(BaseSettings):
     MAX_FILE_SIZE_MB: int = 20
     ALLOWED_EXTENSIONS: list = [".pdf", ".jpg", ".jpeg", ".png"]
     
+    # Google Cloud SQL Settings
+    GCP_SQL_INSTANCE_NAME: str = os.getenv("GCP_SQL_INSTANCE_NAME", "hackhorizon-492907:us-central1:hackhorizon")
+    GCP_SQL_PUBLIC_IP: str = os.getenv("GCP_SQL_PUBLIC_IP", "136.116.108.22")
+    GCP_SQL_PORT: int = int(os.getenv("GCP_SQL_PORT", "3306"))
+    GCP_SQL_DB_NAME: str = os.getenv("GCP_SQL_DB_NAME", "user_information")
+    GCP_SQL_USER: str = os.getenv("GCP_SQL_USER", "User")
+    GCP_SQL_PASSWORD: str = os.getenv("GCP_SQL_PASSWORD", "")
+
+    # Aadhaar classifier settings
+    AADHAAR_MODEL_DIR: str = os.getenv("AADHAAR_MODEL_DIR", "")
+    AADHAAR_CLASSIFIER_THRESHOLD: float = float(os.getenv("AADHAAR_CLASSIFIER_THRESHOLD", "0.55"))
+    
     class Config:
         env_file = ".env"
         extra = "allow"  # Allow extra fields for migration compatibility
