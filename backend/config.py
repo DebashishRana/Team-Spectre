@@ -1,5 +1,5 @@
 """
-Configuration settings for VeriQuickX
+Configuration settings for Unified Identity portal
 """
 
 import os
@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     AZURE_STORAGE_CONTAINER_VERIFIED: str = os.getenv("AZURE_STORAGE_CONTAINER_VERIFIED", "verified-docs")
     
     # API Security
-    API_TOKEN: str = os.getenv("API_TOKEN", "veriquickx-secret-token-change-in-production")
+    API_TOKEN: str = os.getenv("API_TOKEN", "Unified Identity portal-secret-token-change-in-production")
     
     # CORS
     ALLOWED_ORIGINS: list = [

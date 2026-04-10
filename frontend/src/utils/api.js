@@ -5,7 +5,7 @@
 import axios from 'axios'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
-const API_TOKEN = import.meta.env.VITE_API_TOKEN || 'veriquickx-secret-token-change-in-production'
+const API_TOKEN = import.meta.env.VITE_API_TOKEN || 'unified-identity-portal-secret-token-change-in-production'
 
 // Create axios instance with default config
 const api = axios.create({

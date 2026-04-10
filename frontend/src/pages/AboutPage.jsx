@@ -6,7 +6,7 @@ function AboutPage() {
     <div className="about-page">
       <div className="about-container">
         <div className="about-header">
-          <h1 className="page-title">About VeriQuickX</h1>
+          <h1 className="page-title">About Unified Identity portal</h1>
           <p className="page-subtitle">
             A comprehensive document verification and QR code management system
           </p>
@@ -16,7 +16,7 @@ function AboutPage() {
           <section className="about-section">
             <h2>Overview</h2>
             <p>
-              VeriQuickX is a full-stack application designed to streamline document
+              Unified Identity portal is a full-stack application designed to streamline document
               verification processes. It allows users to upload identity documents
               (Aadhaar, PAN, and other IDs), generate secure QR codes for easy access,
               and verify document authenticity through advanced validation algorithms.
@@ -201,7 +201,7 @@ npm run dev`}
           <section className="about-section">
             <h2>License & Copyright</h2>
             <p>
-              © 2025 VeriQuickX. All rights reserved.
+              © 2025 Unified Identity portal. All rights reserved.
               <br />
               This is proprietary software. Permission required to edit and modify.
             </p>

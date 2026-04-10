@@ -54,7 +54,7 @@ function AuthPage() {
         <div className="auth-left-content">
           <h1 className="auth-left-title">Proof first profit later</h1>
           <p className="auth-left-subtitle">
-            Explore Dectra's core features for individuals and organizations.
+            Explore Unified Identity portal's core features for individuals and organizations.
           </p>
           <div className="auth-dropdown">
             <button 
@@ -104,7 +104,7 @@ function AuthPage() {
           {/* Main Form */}
           <div className="auth-form-container">
             <h1 className="auth-form-title">
-              {isLogin ? 'Sign in to Dectra' : 'Sign up for Dectra'}
+              {isLogin ? 'Sign in to Unified Identity portal' : 'Sign up for Unified Identity portal'}
             </h1>
 
             {/* Social Login Buttons */}

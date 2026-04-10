@@ -1,5 +1,5 @@
 """
-VeriQuickX Backend API
+Unified Identity portal Backend API
 FastAPI server for document upload, QR generation, and validation
 Now using Azure Blob Storage with SAS-based secure access
 """
@@ -28,7 +28,7 @@ from config import settings
 from azure_storage import get_azure_storage
 
 
-LEGACY_DEV_TOKEN = "veriquickx-secret-token-change-in-productio"
+LEGACY_DEV_TOKEN = "Unified Identity portal-secret-token-change-in-productio"
 
 
 def _is_valid_token(token: str) -> bool:
@@ -36,7 +36,7 @@ def _is_valid_token(token: str) -> bool:
     # to avoid local dev mismatches.
     return token in {settings.API_TOKEN, LEGACY_DEV_TOKEN}
 
-app = FastAPI(title="VeriQuickX API", version="1.0.0")
+app = FastAPI(title="Unified Identity portal API", version="1.0.0")
 
 # CORS middleware
 app.add_middleware(
@@ -65,7 +65,7 @@ doc_processor = DocumentProcessor()
 validator = DocumentValidator()
 
 # Database setup
-DB_PATH = "veriquickx.db"
+DB_PATH = "Unified Identity portal.db"
 
 def init_db():
     """Initialize SQLite database"""
@@ -152,7 +152,26 @@ app.middleware_stack = None
 
 @app.get("/")
 async def root():
-    return {"message": "VeriQuickX API", "version": "1.0.0"}
+    return {"message": "Unified Identity portal API", "version": "1.0.0"}
+
+from cloud_sql.aadhaar_ocr import extract_aadhaar_details
+import tempfile
+import shutil
+
+@app.post("/api/extract-aadhaar")
+async def extract_aadhaar_endpoint(file: UploadFile = File(...)):
+    # Save the file temporarily
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
+        shutil.copyfileobj(file.file, tmp)
+        tmp_path = tmp.name
+    
+    try:
+        # Process the image via OCR
+        result = extract_aadhaar_details(tmp_path)
+    finally:
+        os.remove(tmp_path)
+        
+    return {"status": "success", "data": result}
 
 @app.post("/api/upload")
 async def request_upload_sas(

@@ -1,6 +1,6 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
-import Navbar from './components/Navbar'
+import Sidebar from './components/Sidebar'
 import DashboardPage from './pages/DashboardPage'
 import ScannerPage from './pages/ScannerPage'
 import AdminPage from './pages/AdminPage'
@@ -12,15 +12,25 @@ function AppContent() {
   const location = useLocation()
   const isAuthPage = location.pathname === '/' || location.pathname === '/auth' || location.pathname === '/login' || location.pathname === '/signup'
 
-  return (
-    <div className="app">
-      {!isAuthPage && <Navbar />}
-      <main className={`main-content ${isAuthPage ? 'auth-layout' : ''}`}>
+  // If we are in auth page, don't show sidebar
+  if (isAuthPage) {
+    return (
+      <main className="auth-layout">
         <Routes>
           <Route path="/" element={<AuthPage />} />
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/login" element={<AuthPage />} />
           <Route path="/signup" element={<AuthPage />} />
+        </Routes>
+      </main>
+    )
+  }
+
+  return (
+    <div className="app-container">
+      <Sidebar />
+      <main className="main-content">
+        <Routes>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/scan" element={<ScannerPage />} />
           <Route path="/admin" element={<AdminPage />} />

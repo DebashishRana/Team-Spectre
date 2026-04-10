@@ -108,7 +108,7 @@ function UploadPage() {
         const now = Date.now()
         const results = files.map((file, index) => {
           const fileId = `demo_${now}_${index}`
-          const shareLink = `https://demo.veriquick.local/share/${fileId}`
+          const shareLink = `https://demo.Unified Identity portal.local/share/${fileId}`
           return {
             success: true,
             filename: file.name,
