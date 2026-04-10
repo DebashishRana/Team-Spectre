@@ -51,7 +51,7 @@ const SchemesPage = () => {
     <div className="schemes-page-wrapper">
       {/* Hero Section */}
       <div className="schemes-hero">
-        <h1 className="schemes-title">Schemes on UMANG</h1>
+        <h1 className="schemes-title">Schemes on Seva Setu portal</h1>
         <p className="schemes-subtitle">
           Explore seamless access to many government services and schemes at one place, ensuring hassle-free and transparent experience for citizens.
         </p>

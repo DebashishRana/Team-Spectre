@@ -12,6 +12,7 @@
   flex-direction: column;
   padding: 32px 40px;
   background-color: #fafbfe;
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .auth-layout {
