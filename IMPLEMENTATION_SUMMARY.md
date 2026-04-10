@@ -1,4 +1,4 @@
-# VeriQuickX Implementation Summary
+# Seva Setu Portal - Implementation Summary
 
 ## ✅ Completed Features
 

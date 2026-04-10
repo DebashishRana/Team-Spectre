@@ -1,6 +1,6 @@
-# VeriQuickX - Document Verification System
+# Seva Setu Portal - Document Verification System
 
-A comprehensive full-stack application for document upload, QR code generation, and verification. Supports Aadhaar and PAN card processing with advanced validation algorithms.
+A comprehensive full-stack government portal for document upload, QR code generation, and verification. Supports Aadhaar, PAN, and other identity document processing with advanced validation algorithms for Indian citizens.
 
 ## 🚀 Features
 
@@ -57,7 +57,7 @@ sudo apt-get install tesseract-ocr
 
 ```bash
 git clone <repository-url>
-cd "Veriquick Cloud"
+cd "Seva-Setu-Portal"
 ```
 
 ### 2. Backend Setup
@@ -131,7 +131,7 @@ The frontend will be available at `http://localhost:3000`
 ## 📁 Project Structure
 
 ```
-Veriquick Cloud/
+Seva-Setu-Portal/
 ├── backend/
 │   ├── main.py                 # FastAPI application
 │   ├── config.py               # Configuration settings
@@ -139,7 +139,7 @@ Veriquick Cloud/
 │   ├── validators.py           # Document validation functions
 │   ├── requirements.txt        # Python dependencies
 │   ├── .env.example            # Environment variables template
-│   └── veriquickx.db           # SQLite database (created automatically)
+│   └── seva-setu-portal.db           # SQLite database (created automatically)
 │
 ├── frontend/
 │   ├── src/
@@ -300,7 +300,7 @@ If you prefer Streamlit, you can convert the React frontend to Streamlit, but th
 
 ## 📝 License
 
-© 2025 VeriQuickX. All rights reserved.
+© 2025 Seva Setu Portal. All rights reserved.
 Proprietary software - Permission required to edit and modify.
 
 ## 👤 Contact

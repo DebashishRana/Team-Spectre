@@ -23,7 +23,7 @@ function AuthPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer veriquickx-secret-token-change-in-production'
+          'Authorization': 'Bearer seva-setu-portal-secret-token-change-in-production'
         },
         body: JSON.stringify({
           email,

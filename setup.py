@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Setup script for VeriQuickX
+Setup script for Seva Setu Portal
 Helps with initial configuration
 """
 
@@ -33,7 +33,7 @@ def setup_backend():
     # Generate tokens
     api_token = generate_token()
     content = content.replace("your_dropbox_access_token_here", "")
-    content = content.replace("veriquickx-secret-token-change-in-production", api_token)
+    content = content.replace("seva-setu-portal-secret-token-change-in-production", api_token)
     
     # Write .env
     with open(env_path, 'w') as f:
@@ -56,7 +56,7 @@ def setup_frontend():
     
     # Read backend .env to get API token
     backend_env = "backend/.env"
-    api_token = "veriquickx-secret-token-change-in-production"
+    api_token = "seva-setu-portal-secret-token-change-in-production"
     
     if os.path.exists(backend_env):
         with open(backend_env, 'r') as f:
@@ -88,7 +88,7 @@ def create_directories():
 
 def main():
     print("=" * 50)
-    print("VeriQuickX Setup Script")
+    print("Seva Setu Portal - Setup Script")
     print("=" * 50)
     
     create_directories()

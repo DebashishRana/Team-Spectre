@@ -1,9 +1,9 @@
-# VeriQuickX Project Structure
+# Seva Setu Portal - Project Structure
 
 ## Complete File Tree
 
 ```
-Veriquick Cloud/
+Seva-Setu-Portal/
 │
 ├── backend/                          # Python FastAPI Backend
 │   ├── main.py                       # Main FastAPI application
@@ -13,7 +13,7 @@ Veriquick Cloud/
 │   ├── requirements.txt              # Python dependencies
 │   ├── .env.example                  # Environment variables template
 │   ├── .env                          # Environment variables (create from .env.example)
-│   └── veriquickx.db                 # SQLite database (auto-created)
+│   └── seva-setu-portal.db           # SQLite database (auto-created)
 │
 ├── frontend/                         # React Frontend
 │   ├── src/

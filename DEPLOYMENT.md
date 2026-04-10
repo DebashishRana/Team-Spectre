@@ -1,4 +1,4 @@
-# VeriQuickX Deployment Guide
+# Seva Setu Portal - Deployment Guide
 
 ## Quick Start
 
@@ -139,7 +139,7 @@ services:
       - API_TOKEN=${API_TOKEN}
       - ALLOWED_ORIGINS=http://localhost:3000
     volumes:
-      - ./backend/veriquickx.db:/app/veriquickx.db
+      - ./backend/seva-setu-portal.db:/app/seva-setu-portal.db
 
   frontend:
     build: ./frontend

@@ -1,4 +1,4 @@
-# VeriQuickX Quick Start Guide
+# Seva Setu Portal - Quick Start Guide
 
 Get up and running in 5 minutes!
 
