@@ -9,7 +9,7 @@ function AuthPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   
-  // Signup fields - Personal Info
+  // Signup fields
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
@@ -18,13 +18,8 @@ function AuthPage() {
   const [username, setUsername] = useState('')
   const [country, setCountry] = useState('India')
   const [receiveUpdates, setReceiveUpdates] = useState(false)
-  
-  // Email Verification
-  const [verificationStep, setVerificationStep] = useState('personal') // personal, verify_email, complete
-  const [verificationCode, setVerificationCode] = useState('')
-  const [verificationSent, setVerificationSent] = useState(false)
-  const [verificationLoading, setVerificationLoading] = useState(false)
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
   
   const [showWhatsIncluded, setShowWhatsIncluded] = useState(false)
   const navigate = useNavigate()
@@ -32,13 +27,12 @@ function AuthPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+    setLoading(true)
     
     if (isLogin) {
       // Login logic
-      const url = 'http://localhost:5000/api/auth/login';
-      
       try {
-        const response = await fetch(url, {
+        const response = await fetch('http://localhost:5000/api/auth/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -60,150 +54,63 @@ function AuthPage() {
         }
       } catch (error) {
         console.error('Error during login:', error);
-        setError('Error connecting to authentication service.');
+        setError('Error connecting to server. Make sure backend is running on port 5000');
+      } finally {
+        setLoading(false)
       }
     } else {
-      // Signup logic with verification
-      if (verificationStep === 'personal') {
-        // Validate personal info
-        if (!firstName || !lastName || !phoneNumber || !signupEmail) {
-          setError('Please fill in all personal information fields');
-          return;
-        }
+      // Signup logic - direct registration
+      if (!firstName || !lastName || !phoneNumber || !signupEmail || !signupPassword || !username) {
+        setError('Please fill in all required fields');
+        setLoading(false)
+        return;
+      }
+
+      if (!isValidPassword(signupPassword)) {
+        setError('Password does not meet requirements');
+        setLoading(false)
+        return;
+      }
+
+      if (!isValidUsername(username)) {
+        setError('Username format is invalid');
+        setLoading(false)
+        return;
+      }
+
+      try {
+        const response = await fetch('http://localhost:5000/api/auth/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer seva-setu-portal-secret-token-change-in-production'
+          },
+          body: JSON.stringify({
+            first_name: firstName,
+            last_name: lastName,
+            phone_number: phoneNumber,
+            email: signupEmail,
+            password: signupPassword,
+            username,
+            country,
+            receive_updates: receiveUpdates
+          })
+        });
+
+        const data = await response.json();
         
-        // Send verification email
-        await handleSendVerification();
-      } else if (verificationStep === 'verify_email') {
-        // Verify email code
-        await handleVerifyEmail();
-      } else if (verificationStep === 'complete') {
-        // Complete registration
-        await handleCompleteRegistration();
+        if (response.ok) {
+          console.log('Registration successful:', data);
+          navigate('/dashboard');
+        } else {
+          setError(data.detail || 'Registration failed');
+        }
+      } catch (error) {
+        console.error('Error during registration:', error);
+        setError('Error connecting to server. Make sure backend is running on port 5000');
+      } finally {
+        setLoading(false)
       }
-    }
-  }
-
-  const handleSendVerification = async () => {
-    setVerificationLoading(true)
-    
-    try {
-      const response = await fetch('http://localhost:5000/api/auth/send-verification', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer seva-setu-portal-secret-token-change-in-production'
-        },
-        body: JSON.stringify({
-          email: signupEmail,
-          first_name: firstName,
-          last_name: lastName,
-        })
-      });
-
-      const data = await response.json();
-      
-      if (response.ok) {
-        setVerificationStep('verify_email');
-        setVerificationSent(true);
-      } else {
-        setError(data.detail || 'Failed to send verification email');
-      }
-    } catch (error) {
-      console.error('Error sending verification:', error);
-      setError('Error sending verification email');
-    } finally {
-      setVerificationLoading(false)
-    }
-  }
-
-  const handleVerifyEmail = async () => {
-    if (!verificationCode) {
-      setError('Please enter the verification code');
-      return;
-    }
-
-    setVerificationLoading(true)
-    
-    try {
-      const response = await fetch('http://localhost:5000/api/auth/verify-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer seva-setu-portal-secret-token-change-in-production'
-        },
-        body: JSON.stringify({
-          email: signupEmail,
-          code: verificationCode
-        })
-      });
-
-      const data = await response.json();
-      
-      if (response.ok) {
-        setVerificationStep('complete');
-        setVerificationCode('');
-      } else {
-        setError(data.detail || 'Invalid verification code');
-      }
-    } catch (error) {
-      console.error('Error verifying email:', error);
-      setError('Error verifying email');
-    } finally {
-      setVerificationLoading(false)
-    }
-  }
-
-  const handleCompleteRegistration = async () => {
-    // Validate password
-    if (!signupPassword || !username) {
-      setError('Please fill in password and username');
-      return;
-    }
-
-    if (!isValidPassword(signupPassword)) {
-      setError('Password does not meet requirements');
-      return;
-    }
-
-    if (!isValidUsername(username)) {
-      setError('Username format is invalid');
-      return;
-    }
-
-    setVerificationLoading(true)
-    
-    try {
-      const response = await fetch('http://localhost:5000/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer seva-setu-portal-secret-token-change-in-production'
-        },
-        body: JSON.stringify({
-          first_name: firstName,
-          last_name: lastName,
-          phone_number: phoneNumber,
-          email: signupEmail,
-          password: signupPassword,
-          username,
-          country,
-          receive_updates: receiveUpdates
-        })
-      });
-
-      const data = await response.json();
-      
-      if (response.ok) {
-        console.log('Registration successful:', data);
-        navigate('/dashboard');
-      } else {
-        setError(data.detail || 'Registration failed');
-      }
-    } catch (error) {
-      console.error('Error during registration:', error);
-      setError('Error connecting to registration service');
-    } finally {
-      setVerificationLoading(false)
     }
   }
 
@@ -376,192 +283,128 @@ function AuthPage() {
                   </div>
                 </>
               ) : (
-                // SIGNUP FORM - Multi-step
+                // SIGNUP FORM - Simplified single-step
                 <>
-                  {/* STEP 1: Personal Information */}
-                  {verificationStep === 'personal' && (
-                    <>
-                      <h3 className="step-title">Step 1: Personal Information</h3>
-                      
-                      {/* First Name */}
-                      <div className="input-group">
-                        <label className="input-label">First Name*</label>
-                        <input
-                          type="text"
-                          placeholder="First Name"
-                          value={firstName}
-                          onChange={(e) => setFirstName(e.target.value)}
-                          className="auth-input"
-                          required
-                        />
-                      </div>
+                  {/* First Name */}
+                  <div className="input-group">
+                    <label className="input-label">First Name*</label>
+                    <input
+                      type="text"
+                      placeholder="First Name"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      className="auth-input"
+                      required
+                    />
+                  </div>
 
-                      {/* Last Name */}
-                      <div className="input-group">
-                        <label className="input-label">Last Name*</label>
-                        <input
-                          type="text"
-                          placeholder="Last Name"
-                          value={lastName}
-                          onChange={(e) => setLastName(e.target.value)}
-                          className="auth-input"
-                          required
-                        />
-                      </div>
+                  {/* Last Name */}
+                  <div className="input-group">
+                    <label className="input-label">Last Name*</label>
+                    <input
+                      type="text"
+                      placeholder="Last Name"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      className="auth-input"
+                      required
+                    />
+                  </div>
 
-                      {/* Phone Number */}
-                      <div className="input-group">
-                        <label className="input-label">Phone Number*</label>
-                        <input
-                          type="tel"
-                          placeholder="+91 98765 43210"
-                          value={phoneNumber}
-                          onChange={(e) => setPhoneNumber(e.target.value)}
-                          className="auth-input"
-                          required
-                        />
-                        <p className="input-hint">
-                          Enter your phone number including country code (e.g., +91 for India)
-                        </p>
-                      </div>
+                  {/* Phone Number */}
+                  <div className="input-group">
+                    <label className="input-label">Phone Number*</label>
+                    <input
+                      type="tel"
+                      placeholder="+91 98765 43210"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      className="auth-input"
+                      required
+                    />
+                    <p className="input-hint">
+                      Enter your phone number including country code (e.g., +91 for India)
+                    </p>
+                  </div>
 
-                      {/* Email */}
-                      <div className="input-group">
-                        <label className="input-label">Email*</label>
-                        <input
-                          type="email"
-                          placeholder="your.email@example.com"
-                          value={signupEmail}
-                          onChange={(e) => setSignupEmail(e.target.value)}
-                          className="auth-input"
-                          required
-                        />
-                        <p className="input-hint">
-                          We'll send a verification code to this email
-                        </p>
-                      </div>
+                  {/* Email */}
+                  <div className="input-group">
+                    <label className="input-label">Email*</label>
+                    <input
+                      type="email"
+                      placeholder="your.email@example.com"
+                      value={signupEmail}
+                      onChange={(e) => setSignupEmail(e.target.value)}
+                      className="auth-input"
+                      required
+                    />
+                  </div>
 
-                      {/* Country */}
-                      <div className="input-group">
-                        <label className="input-label">Your Country/Region*</label>
-                        <select
-                          value={country}
-                          onChange={(e) => setCountry(e.target.value)}
-                          className="auth-select"
-                          required
-                        >
-                          <option value="India">India</option>
-                          <option value="United States">United States</option>
-                          <option value="United Kingdom">United Kingdom</option>
-                          <option value="Canada">Canada</option>
-                          <option value="Australia">Australia</option>
-                          <option value="Germany">Germany</option>
-                          <option value="France">France</option>
-                          <option value="Japan">Japan</option>
-                          <option value="Other">Other</option>
-                        </select>
-                      </div>
-                    </>
-                  )}
+                  {/* Username */}
+                  <div className="input-group">
+                    <label className="input-label">Username*</label>
+                    <input
+                      type="text"
+                      placeholder="Username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      className="auth-input"
+                      required
+                    />
+                    <p className="input-hint">
+                      Username may only contain alphanumeric characters or single hyphens, and cannot begin or end with a hyphen.
+                    </p>
+                  </div>
 
-                  {/* STEP 2: Email Verification */}
-                  {verificationStep === 'verify_email' && (
-                    <>
-                      <h3 className="step-title">Step 2: Verify Your Email</h3>
-                      
-                      <p className="verification-message">
-                        We've sent a verification code to <strong>{signupEmail}</strong>
-                      </p>
+                  {/* Password */}
+                  <div className="input-group">
+                    <label className="input-label">Password*</label>
+                    <input
+                      type="password"
+                      placeholder="Password"
+                      value={signupPassword}
+                      onChange={(e) => setSignupPassword(e.target.value)}
+                      className="auth-input"
+                      required
+                    />
+                    <p className="input-hint">
+                      Password should be at least 15 characters OR at least 8 characters including a number and a lowercase letter.
+                    </p>
+                  </div>
 
-                      <div className="input-group">
-                        <label className="input-label">Verification Code*</label>
-                        <input
-                          type="text"
-                          placeholder="Enter 6-digit code"
-                          value={verificationCode}
-                          onChange={(e) => setVerificationCode(e.target.value.toUpperCase())}
-                          className="auth-input"
-                          maxLength="6"
-                          required
-                        />
-                        <p className="input-hint">
-                          Check your email for the verification code. It may take a few seconds to arrive.
-                        </p>
-                      </div>
+                  {/* Country */}
+                  <div className="input-group">
+                    <label className="input-label">Your Country/Region*</label>
+                    <select
+                      value={country}
+                      onChange={(e) => setCountry(e.target.value)}
+                      className="auth-select"
+                      required
+                    >
+                      <option value="India">India</option>
+                      <option value="United States">United States</option>
+                      <option value="United Kingdom">United Kingdom</option>
+                      <option value="Canada">Canada</option>
+                      <option value="Australia">Australia</option>
+                      <option value="Germany">Germany</option>
+                      <option value="France">France</option>
+                      <option value="Japan">Japan</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
 
-                      <button 
-                        type="button"
-                        onClick={() => setVerificationStep('personal')}
-                        className="auth-back-button"
-                      >
-                        ← Back
-                      </button>
-                    </>
-                  )}
-
-                  {/* STEP 3: Complete Registration */}
-                  {verificationStep === 'complete' && (
-                    <>
-                      <h3 className="step-title">Step 3: Create Password</h3>
-                      
-                      <p className="verification-message">
-                        Email verified! ✓ Now set up your account security.
-                      </p>
-
-                      {/* Username */}
-                      <div className="input-group">
-                        <label className="input-label">Username*</label>
-                        <input
-                          type="text"
-                          placeholder="Username"
-                          value={username}
-                          onChange={(e) => setUsername(e.target.value)}
-                          className="auth-input"
-                          required
-                        />
-                        <p className="input-hint">
-                          Username may only contain alphanumeric characters or single hyphens, and cannot begin or end with a hyphen.
-                        </p>
-                      </div>
-
-                      {/* Password */}
-                      <div className="input-group">
-                        <label className="input-label">Password*</label>
-                        <input
-                          type="password"
-                          placeholder="Password"
-                          value={signupPassword}
-                          onChange={(e) => setSignupPassword(e.target.value)}
-                          className="auth-input"
-                          required
-                        />
-                        <p className="input-hint">
-                          Password should be at least 15 characters OR at least 8 characters including a number and a lowercase letter.
-                        </p>
-                      </div>
-
-                      {/* Email Preferences */}
-                      <div className="checkbox-group">
-                        <label className="checkbox-label">
-                          <input
-                            type="checkbox"
-                            checked={receiveUpdates}
-                            onChange={(e) => setReceiveUpdates(e.target.checked)}
-                            className="checkbox-input"
-                          />
-                          <span className="checkbox-text">Receive occasional product updates and announcements</span>
-                        </label>
-                      </div>
-
-                      <button 
-                        type="button"
-                        onClick={() => setVerificationStep('verify_email')}
-                        className="auth-back-button"
-                      >
-                        ← Back
-                      </button>
-                    </>
-                  )}
+                  {/* Email Preferences */}
+                  <div className="checkbox-group">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={receiveUpdates}
+                        onChange={(e) => setReceiveUpdates(e.target.checked)}
+                        className="checkbox-input"
+                      />
+                      <span className="checkbox-text">Receive occasional product updates and announcements</span>
+                    </label>
+                  </div>
                 </>
               )}
 
@@ -576,15 +419,9 @@ function AuthPage() {
               <button 
                 type="submit" 
                 className={`auth-submit-button ${isLogin ? 'login' : 'signup'}`}
-                disabled={verificationLoading}
+                disabled={loading}
               >
-                {verificationLoading ? 'Loading...' : (
-                  isLogin ? 'Sign In' : (
-                    verificationStep === 'personal' ? 'Send Verification Code' :
-                    verificationStep === 'verify_email' ? 'Verify Email' :
-                    'Complete Registration'
-                  )
-                )}
+                {loading ? 'Loading...' : (isLogin ? 'Sign In' : 'Sign Up')}
               </button>
             </form>
 
