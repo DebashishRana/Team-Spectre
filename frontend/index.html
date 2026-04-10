@@ -5,6 +5,28 @@
     <link rel="icon" type="image/svg+xml" href="/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Unified Identity portal</title>
+    <script>
+      window.watsonAssistantChatOptions = {
+        integrationID: "5553c10a-5f13-4a92-acd9-2318f3abd826",
+        region: "au-syd",
+        serviceInstanceID: "04bab5ac-f2d0-4980-96e0-18073dbdbad1",
+        onLoad: async (instance) => { await instance.render(); }
+      };
+      setTimeout(function(){
+        const t=document.createElement('script');
+        t.src="https://web-chat.global.assistant.watson.appdomain.cloud/versions/" + (window.watsonAssistantChatOptions.clientVersion || 'latest') + "/WatsonAssistantChatEntry.js";
+        document.head.appendChild(t);
+      });
+    </script>
+    <style>
+      /* Watson Assistant Chat Styling */
+      #watson-assistant-chat-frame {
+        position: fixed !important;
+        bottom: 20px !important;
+        right: 20px !important;
+        z-index: 999 !important;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
