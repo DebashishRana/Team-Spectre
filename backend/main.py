@@ -244,6 +244,127 @@ async def extract_aadhaar_endpoint(file: UploadFile = File(...)):
         "data": result,
     }
 
+@app.post("/api/save-document")
+async def save_document_endpoint(
+    user_id: int = Form(...),
+    document_type: str = Form(...),  # "aadhaar", "pan", etc.
+    extracted_data: str = Form(...),  # JSON string of extracted data
+    classification: str = Form(...),  # JSON string of classifier result
+    validation: str = Form(...),  # JSON string of validation result
+    db: Session = Depends(get_db)
+):
+    """
+    Save extracted document data to user vault with encryption.
+    Sensitive fields (Aadhaar, phone, address) are encrypted before storage.
+    """
+    if not db:
+        raise HTTPException(status_code=500, detail="Database not available")
+    
+    try:
+        from encryption import DocumentEncryption, should_encrypt
+        from cloud_sql.db import UserDocument
+        
+        # Parse JSON inputs
+        data = json.loads(extracted_data)
+        classification_result = json.loads(classification)
+        validation_result = json.loads(validation)
+        
+        # Initialize encryption
+        encryptor = DocumentEncryption()
+        
+        # Create document record
+        doc_record = UserDocument(
+            user_id=user_id,
+            document_type=document_type,
+            confidence_score=f"{(classification_result.get('confidence', 0) * 100):.1f}%",
+            validation_status=validation_result.get("status", "unknown")
+        )
+        
+        # Encrypt and assign fields
+        for key, value in data.items():
+            if hasattr(doc_record, key):
+                if should_encrypt(key):
+                    # Encrypt sensitive fields
+                    setattr(doc_record, key, encryptor.encrypt_field(str(value)))
+                else:
+                    # Store non-sensitive fields plaintext
+                    setattr(doc_record, key, value)
+        
+        # Save to database
+        db.add(doc_record)
+        db.commit()
+        db.refresh(doc_record)
+        
+        return {
+            "status": "success",
+            "message": "Document saved securely to vault",
+            "document_id": doc_record.id,
+            "user_id": user_id,
+            "document_type": document_type,
+            "saved_at": doc_record.created_at
+        }
+    
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid JSON in request: {str(e)}")
+    except Exception as e:
+        print(f"[ERROR] Failed to save document: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to save document: {str(e)}")
+
+
+@app.get("/api/get-documents/{user_id}")
+async def get_user_documents(
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieve user's stored documents with decryption of sensitive fields.
+    """
+    if not db:
+        raise HTTPException(status_code=500, detail="Database not available")
+    
+    try:
+        from encryption import DocumentEncryption, should_encrypt
+        from cloud_sql.db import UserDocument
+        
+        # Fetch documents
+        documents = db.query(UserDocument).filter(UserDocument.user_id == user_id).all()
+        
+        encryptor = DocumentEncryption()
+        result = []
+        
+        for doc in documents:
+            doc_dict = {
+                "id": doc.id,
+                "document_type": doc.document_type,
+                "confidence_score": doc.confidence_score,
+                "validation_status": doc.validation_status,
+                "created_at": doc.created_at
+            }
+            
+            # Decrypt sensitive fields
+            for key in ["id_number", "full_name", "phone", "address"]:
+                encrypted_value = getattr(doc, key, None)
+                if encrypted_value and should_encrypt(key):
+                    try:
+                        doc_dict[key] = encryptor.decrypt_field(encrypted_value)
+                    except:
+                        doc_dict[key] = "[Decryption failed]"
+                else:
+                    doc_dict[key] = getattr(doc, key, None)
+            
+            result.append(doc_dict)
+        
+        return {
+            "status": "success",
+            "user_id": user_id,
+            "document_count": len(result),
+            "documents": result
+        }
+    
+    except Exception as e:
+        print(f"[ERROR] Failed to retrieve documents: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve documents: {str(e)}")
+
 @app.post("/api/upload")
 async def request_upload_sas(
     filename: str = Form(...),

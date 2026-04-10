@@ -1,9 +1,10 @@
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, Enum, Text
 from sqlalchemy.engine import URL
 from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import datetime
 import json
 import logging
+import enum
 
 from config import settings
 
@@ -38,6 +39,38 @@ class UserAccount(Base):
     country = Column(String(100), nullable=True)
     receive_updates = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class DocumentType(str, enum.Enum):
+    AADHAAR = "aadhaar"
+    PAN = "pan"
+    PASSPORT = "passport"
+    DRIVING_LICENSE = "driving_license"
+
+
+class UserDocument(Base):
+    __tablename__ = "user_documents"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=False, index=True)  # Links to UserAccount
+    document_type = Column(String(50), nullable=False)  # e.g., "aadhaar", "pan"
+    
+    # Encrypted fields
+    id_number = Column(Text, nullable=True)  # Encrypted Aadhaar/PAN number
+    full_name = Column(Text, nullable=True)  # Encrypted name
+    date_of_birth = Column(String(100), nullable=True)  # Can be public or encrypted
+    gender = Column(String(10), nullable=True)
+    phone = Column(Text, nullable=True)  # Encrypted
+    address = Column(Text, nullable=True)  # Encrypted
+    
+    # Metadata
+    document_file_url = Column(String(500), nullable=True)  # GCS URL to original document
+    confidence_score = Column(String(50), nullable=True)  # e.g., "94.6%"
+    validation_status = Column(String(50), nullable=True)  # "valid", "partial", "invalid"
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 
 def init_cloud_sql_db():
     if engine is not None:

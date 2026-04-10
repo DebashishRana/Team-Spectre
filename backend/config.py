@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     AADHAAR_MODEL_DIR: str = os.getenv("AADHAAR_MODEL_DIR", "")
     AADHAAR_CLASSIFIER_THRESHOLD: float = float(os.getenv("AADHAAR_CLASSIFIER_THRESHOLD", "0.55"))
     
+    # Encryption settings
+    ENCRYPTION_KEY: str = os.getenv("ENCRYPTION_KEY", "")  # Base64-encoded Fernet key
+    
     class Config:
         env_file = ".env"
         extra = "allow"  # Allow extra fields for migration compatibility
