@@ -42,6 +42,11 @@ function Sidebar() {
                 <span className="icon">🏛️</span> Apply to schemes
               </Link>
             </li>
+            <li className={isActive('/schemes') ? 'active' : ''}>
+              <Link to="/schemes">
+                <span className="icon">🔍</span> Explore Schemes
+              </Link>
+            </li>
             <li className={isActive('/history') ? 'active' : ''}>
               <Link to="/history">
                 <span className="icon">📝</span> Application logs

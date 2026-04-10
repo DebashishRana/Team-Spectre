@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import Sidebar from './components/Sidebar'
 import DashboardPage from './pages/DashboardPage'
 import ScannerPage from './pages/ScannerPage'
+import SchemesPage from './pages/SchemesPage'
 import AdminPage from './pages/AdminPage'
 import AboutPage from './pages/AboutPage'
 import AuthPage from './pages/AuthPage'
@@ -34,6 +35,7 @@ function AppContent() {
         <Routes>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/scan" element={<ScannerPage />} />
+          <Route path="/schemes" element={<SchemesPage />} />
           <Route path="/logs" element={<VerificationLogsPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/about" element={<AboutPage />} />
