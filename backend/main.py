@@ -464,6 +464,120 @@ async def autofill_endpoint(
         print(f"[ERROR] Auto-fill failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Auto-fill failed: {str(e)}")
 
+
+@app.get("/api/user-extraction-logs/{user_id}")
+async def get_user_extraction_logs(
+    user_id: int,
+    skip: int = 0,
+    limit: int = 50,
+    document_type: str = None,
+    status: str = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieve verification logs (extraction history) for a user with pagination and filtering.
+    
+    Query Parameters:
+    - skip: Number of records to skip (default 0)
+    - limit: Number of records to return (default 50, max 100)
+    - document_type: Filter by document type (e.g., "aadhaar")
+    - status: Filter by validation status (e.g., "valid", "partial", "invalid")
+    
+    Response:
+    {
+      "status": "success",
+      "total_count": 10,
+      "records": [
+        {
+          "id": 1,
+          "document_type": "aadhaar",
+          "confidence_score": "94.6%",
+          "validation_status": "valid",
+          "created_at": "2024-01-15T10:30:00",
+          "extracted_data": {
+            "id_number": "3818 8009 2292",
+            "full_name": "John Doe",
+            "date_of_birth": "11/10/1987",
+            "address": "Flat C3, Mumbai"
+          }
+        }
+      ]
+    }
+    """
+    if not db:
+        raise HTTPException(status_code=500, detail="Database not available")
+    
+    try:
+        from encryption import DocumentEncryption, should_encrypt
+        from cloud_sql.db import UserDocument
+        
+        # Limit max records
+        limit = min(limit, 100)
+        
+        # Build query
+        query = db.query(UserDocument).filter(UserDocument.user_id == user_id)
+        
+        # Apply filters
+        if document_type:
+            query = query.filter(UserDocument.document_type == document_type)
+        if status:
+            query = query.filter(UserDocument.validation_status == status)
+        
+        # Get total count before pagination
+        total_count = query.count()
+        
+        # Apply pagination and order by latest first
+        documents = query.order_by(UserDocument.created_at.desc()).offset(skip).limit(limit).all()
+        
+        encryptor = DocumentEncryption()
+        records = []
+        
+        for doc in documents:
+            # Prepare extracted data with decryption
+            extracted_data = {}
+            decrypt_fields = ["id_number", "full_name", "phone", "address"]
+            
+            for key in decrypt_fields:
+                encrypted_value = getattr(doc, key, None)
+                if encrypted_value:
+                    if should_encrypt(key):
+                        try:
+                            extracted_data[key] = encryptor.decrypt_field(encrypted_value)
+                        except Exception as e:
+                            print(f"[WARN] Failed to decrypt {key}: {str(e)}")
+                            extracted_data[key] = "[Decryption failed]"
+                    else:
+                        extracted_data[key] = encrypted_value
+            
+            # Add non-sensitive extracted fields
+            for key in ["date_of_birth", "gender"]:
+                value = getattr(doc, key, None)
+                if value:
+                    extracted_data[key] = value
+            
+            records.append({
+                "id": doc.id,
+                "document_type": doc.document_type,
+                "confidence_score": doc.confidence_score,
+                "validation_status": doc.validation_status,
+                "created_at": doc.created_at.isoformat() if doc.created_at else None,
+                "extracted_data": extracted_data
+            })
+        
+        return {
+            "status": "success",
+            "total_count": total_count,
+            "returned_count": len(records),
+            "skip": skip,
+            "limit": limit,
+            "records": records
+        }
+    
+    except Exception as e:
+        print(f"[ERROR] Failed to fetch extraction logs: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch extraction logs: {str(e)}")
+
+
 @app.post("/api/upload")
 async def request_upload_sas(
     filename: str = Form(...),

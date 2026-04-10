@@ -32,6 +32,11 @@ function Sidebar() {
                 <span className="icon">📄</span> My Documents
               </Link>
             </li>
+            <li className={isActive('/logs') ? 'active' : ''}>
+              <Link to="/logs">
+                <span className="icon">📋</span> Verification History
+              </Link>
+            </li>
             <li className={isActive('/applications') ? 'active' : ''}>
               <Link to="/applications">
                 <span className="icon">🏛️</span> Apply to schemes

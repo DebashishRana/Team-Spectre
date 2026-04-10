@@ -6,6 +6,7 @@ import ScannerPage from './pages/ScannerPage'
 import AdminPage from './pages/AdminPage'
 import AboutPage from './pages/AboutPage'
 import AuthPage from './pages/AuthPage'
+import VerificationLogsPage from './pages/VerificationLogsPage'
 import './App.css'
 
 function AppContent() {
@@ -33,6 +34,7 @@ function AppContent() {
         <Routes>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/scan" element={<ScannerPage />} />
+          <Route path="/logs" element={<VerificationLogsPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/about" element={<AboutPage />} />
         </Routes>
