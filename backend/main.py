@@ -365,6 +365,105 @@ async def get_user_documents(
         print(f"[ERROR] Failed to retrieve documents: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to retrieve documents: {str(e)}")
 
+@app.post("/api/autofill")
+async def autofill_endpoint(
+    user_id: int = Form(...),
+    document_id: int = Form(...),
+    form_fields: str = Form(...),  # JSON array of field names
+    db: Session = Depends(get_db)
+):
+    """
+    Auto-fill form fields using stored user document data.
+    
+    Request:
+    {
+      "user_id": 1,
+      "document_id": 5,
+      "form_fields": ["full_name", "dob", "aadhaar", "address"]
+    }
+    
+    Response:
+    {
+      "status": "success",
+      "document_id": 5,
+      "document_type": "aadhaar",
+      "filled_fields": {
+        "full_name": "John Doe",
+        "dob": "11/10/1987",
+        "aadhaar": "3818 8009 2292",
+        "address": "Flat C3, Mumbai"
+      }
+    }
+    """
+    if not db:
+        raise HTTPException(status_code=500, detail="Database not available")
+    
+    try:
+        from encryption import DocumentEncryption, should_encrypt
+        from cloud_sql.db import UserDocument
+        from autofill import autofill, map_field
+        import json
+        
+        # Parse form fields JSON
+        try:
+            fields_to_fill = json.loads(form_fields)
+            if not isinstance(fields_to_fill, list):
+                fields_to_fill = [form_fields]
+        except:
+            fields_to_fill = [form_fields]
+        
+        # Fetch document with user_id validation
+        doc = db.query(UserDocument).filter(
+            UserDocument.id == document_id,
+            UserDocument.user_id == user_id  # Security: only own documents
+        ).first()
+        
+        if not doc:
+            raise HTTPException(
+                status_code=404,
+                detail="Document not found or unauthorized access"
+            )
+        
+        # Prepare user data dict with decryption
+        encryptor = DocumentEncryption()
+        user_data = {
+            "full_name": doc.full_name,
+            "date_of_birth": doc.date_of_birth,
+            "gender": doc.gender,
+            "id_number": doc.id_number,
+            "phone": doc.phone,
+            "address": doc.address,
+        }
+        
+        # Decrypt sensitive fields
+        for key in ["id_number", "full_name", "phone", "address"]:
+            if user_data.get(key) and should_encrypt(key):
+                try:
+                    user_data[key] = encryptor.decrypt_field(user_data[key])
+                except Exception as e:
+                    print(f"[WARN] Failed to decrypt {key}: {str(e)}")
+                    user_data[key] = None
+        
+        # Perform auto-fill
+        filled_fields = autofill(fields_to_fill, user_data)
+        
+        return {
+            "status": "success",
+            "document_id": document_id,
+            "document_type": doc.document_type,
+            "filled_fields": filled_fields,
+            "field_mapping": {
+                field_name: map_field(field_name)
+                for field_name in fields_to_fill
+            }
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERROR] Auto-fill failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Auto-fill failed: {str(e)}")
+
 @app.post("/api/upload")
 async def request_upload_sas(
     filename: str = Form(...),
