@@ -5,15 +5,12 @@ const VerificationLogsPage = () => {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filters, setFilters] = useState({
-    documentType: '',
-    status: '',
-    searchTerm: ''
-  });
+  const [sortBy, setSortBy] = useState('latest');
   const [pagination, setPagination] = useState({
     skip: 0,
     limit: 10,
-    total: 0
+    total: 0,
+    currentPage: 1
   });
   const [selectedLog, setSelectedLog] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
@@ -21,43 +18,30 @@ const VerificationLogsPage = () => {
   // Fetch extraction logs
   useEffect(() => {
     fetchLogs();
-  }, [filters, pagination.skip]);
+  }, [sortBy, pagination.skip]);
 
   const fetchLogs = async () => {
     setLoading(true);
     setError(null);
     
     try {
-      const userId = localStorage.getItem('user_id') || 1; // Get from auth
-      
+      const userId = localStorage.getItem('user_id') || 1;
       let url = `http://localhost:8000/api/user-extraction-logs/${userId}?skip=${pagination.skip}&limit=${pagination.limit}`;
-      
-      if (filters.documentType) {
-        url += `&document_type=${filters.documentType}`;
-      }
-      if (filters.status) {
-        url += `&status=${filters.status}`;
-      }
       
       const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch logs');
       
       const data = await response.json();
+      let records = data.records || [];
       
-      // Apply search filter on client side
-      let filtered = data.records || [];
-      if (filters.searchTerm) {
-        filtered = filtered.filter(log => {
-          const term = filters.searchTerm.toLowerCase();
-          return (
-            log.document_type.toLowerCase().includes(term) ||
-            log.extracted_data?.id_number?.includes(filters.searchTerm) ||
-            log.extracted_data?.full_name?.toLowerCase().includes(term)
-          );
-        });
+      // Apply sorting
+      if (sortBy === 'latest') {
+        records.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      } else if (sortBy === 'oldest') {
+        records.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
       }
       
-      setLogs(filtered);
+      setLogs(records);
       setPagination(prev => ({
         ...prev,
         total: data.total_count
@@ -74,38 +58,18 @@ const VerificationLogsPage = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'valid':
-        return 'verified';
+        return '#27ae60'; // Green
       case 'partial':
-        return 'review';
+        return '#f39c12'; // Amber
       case 'invalid':
-        return 'flagged';
+        return '#e74c3c'; // Red
       default:
-        return 'unknown';
+        return '#95a5a6'; // Gray
     }
   };
 
-  const getStatusBadgeClass = (status) => {
-    const color = getStatusColor(status);
-    return `badge badge-${color}`;
-  };
-
-  const getConfidenceColor = (confidenceStr) => {
-    const confidence = parseInt(confidenceStr || '0');
-    if (confidence >= 85) return 'high-confidence';
-    if (confidence >= 70) return 'medium-confidence';
-    return 'low-confidence';
-  };
-
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
-    setFilters(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    setPagination(prev => ({ ...prev, skip: 0 })); // Reset pagination on filter change
-  };
-
-  const handleViewDetails = (log) => {
+  const handleViewDetails = (log, e) => {
+    if (e) e.stopPropagation();
     setSelectedLog(log);
     setShowDetails(true);
   };
@@ -115,20 +79,19 @@ const VerificationLogsPage = () => {
     setTimeout(() => setSelectedLog(null), 300);
   };
 
-  const handleExportCSV = () => {
+  const handleDownloadCSV = () => {
     if (logs.length === 0) {
-      alert('No records to export');
+      alert('No records to download');
       return;
     }
 
-    const headers = ['Document ID', 'Document Type', 'Confidence Score', 'Status', 'Date', 'Extracted ID', 'Name'];
+    const headers = ['Document ID', 'Document Type', 'Extracted Date', 'Confidence Score', 'Status', 'Extracted Name'];
     const rows = logs.map(log => [
       log.id,
-      log.document_type,
+      log.document_type.toUpperCase(),
+      new Date(log.created_at).toLocaleDateString('en-IN'),
       log.confidence_score,
-      log.validation_status,
-      new Date(log.created_at).toLocaleDateString(),
-      log.extracted_data?.id_number || '-',
+      log.validation_status.toUpperCase(),
       log.extracted_data?.full_name || '-'
     ]);
 
@@ -141,299 +104,304 @@ const VerificationLogsPage = () => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `extraction-logs-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `verification-logs-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
 
   const handleNextPage = () => {
     if ((pagination.skip + pagination.limit) < pagination.total) {
+      const newPage = pagination.currentPage + 1;
       setPagination(prev => ({
         ...prev,
-        skip: prev.skip + prev.limit
+        skip: prev.skip + prev.limit,
+        currentPage: newPage
       }));
     }
   };
 
   const handlePreviousPage = () => {
     if (pagination.skip > 0) {
+      const newPage = pagination.currentPage - 1;
       setPagination(prev => ({
         ...prev,
-        skip: Math.max(0, prev.skip - prev.limit)
+        skip: Math.max(0, prev.skip - prev.limit),
+        currentPage: newPage
       }));
     }
   };
 
+  const handlePageClick = (page) => {
+    const newSkip = (page - 1) * pagination.limit;
+    setPagination(prev => ({
+      ...prev,
+      skip: newSkip,
+      currentPage: page
+    }));
+  };
+
+  const maxPages = Math.ceil(pagination.total / pagination.limit);
+  const pageNumbers = [];
+  const startPage = Math.max(1, pagination.currentPage - 2);
+  const endPage = Math.min(maxPages, pagination.currentPage + 2);
+  
+  for (let i = startPage; i <= endPage; i++) {
+    pageNumbers.push(i);
+  }
+
   return (
-    <div className="verification-logs-container">
-      <div className="logs-header">
-        <h1 className="page-title">Verification History</h1>
-        <p className="page-subtitle">Track all your document extractions and verifications</p>
-      </div>
-
-      {/* Filters Section */}
-      <div className="filters-section">
-        <div className="filter-group">
-          <label htmlFor="searchTerm">Search</label>
-          <input
-            type="text"
-            id="searchTerm"
-            name="searchTerm"
-            placeholder="Search by name, ID, or document type..."
-            value={filters.searchTerm}
-            onChange={handleFilterChange}
-            className="search-input"
-          />
+    <div className="verification-logs-wrapper">
+      {/* Header Section */}
+      <div className="logs-header-section">
+        <div className="header-left">
+          <h1 className="page-title">Verification History</h1>
         </div>
-
-        <div className="filter-group">
-          <label htmlFor="documentType">Document Type</label>
-          <select
-            id="documentType"
-            name="documentType"
-            value={filters.documentType}
-            onChange={handleFilterChange}
-            className="filter-select"
-          >
-            <option value="">All Types</option>
-            <option value="aadhaar">Aadhaar</option>
-            <option value="pan">PAN</option>
-            <option value="passport">Passport</option>
-            <option value="driving_license">Driving License</option>
-          </select>
-        </div>
-
-        <div className="filter-group">
-          <label htmlFor="status">Status</label>
-          <select
-            id="status"
-            name="status"
-            value={filters.status}
-            onChange={handleFilterChange}
-            className="filter-select"
-          >
-            <option value="">All Status</option>
-            <option value="valid">Valid</option>
-            <option value="partial">Partial</option>
-            <option value="invalid">Invalid</option>
-          </select>
-        </div>
-
-        <div className="filter-actions">
-          <button onClick={handleExportCSV} className="btn btn-export">
-            📥 Export to CSV
+        <div className="header-right">
+          <div className="sort-dropdown">
+            <label htmlFor="sortBy">Sort by</label>
+            <select 
+              id="sortBy"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="sort-select"
+            >
+              <option value="latest">Latest</option>
+              <option value="oldest">Oldest</option>
+            </select>
+          </div>
+          <button onClick={handleDownloadCSV} className="btn-download">
+            Download as ▼
           </button>
         </div>
       </div>
 
-      {/* Loading & Error States */}
+      {/* Loading State */}
       {loading && (
-        <div className="loading-state">
+        <div className="loading-container">
           <div className="spinner"></div>
-          <p>Loading extraction history...</p>
+          <p>Loading verification history...</p>
         </div>
       )}
 
+      {/* Error State */}
       {error && (
-        <div className="error-state">
-          <p className="error-message">⚠️ {error}</p>
-          <button onClick={fetchLogs} className="btn btn-retry">Retry</button>
+        <div className="error-container">
+          <p className="error-text">⚠️ {error}</p>
+          <button onClick={fetchLogs} className="btn-retry">Retry</button>
         </div>
       )}
 
+      {/* Empty State */}
       {!loading && !error && logs.length === 0 && (
-        <div className="empty-state">
-          <p className="empty-icon">📋</p>
-          <p className="empty-message">No verification records found</p>
-          <p className="empty-subtext">Upload and verify documents to see them here</p>
+        <div className="empty-container">
+          <p className="empty-text">No verification records found</p>
         </div>
       )}
 
-      {/* Logs Table */}
+      {/* Main Table */}
       {!loading && !error && logs.length > 0 && (
-        <div className="logs-table-container">
-          <table className="logs-table">
-            <thead>
-              <tr>
-                <th>Document ID</th>
-                <th>Document Type</th>
-                <th>Confidence Score</th>
-                <th>Status</th>
-                <th>Date</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logs.map(log => (
-                <tr key={log.id} className="log-row">
-                  <td className="id-cell">#{log.id}</td>
-                  <td className="doc-type">
-                    <span className="doc-type-badge">
-                      {log.document_type.toUpperCase()}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="confidence-container">
-                      <span className={`confidence-score ${getConfidenceColor(log.confidence_score)}`}>
-                        {log.confidence_score}
-                      </span>
-                      <div className="confidence-bar">
-                        <div 
-                          className={`confidence-fill ${getConfidenceColor(log.confidence_score)}`}
-                          style={{ width: `${parseInt(log.confidence_score) || 0}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <span className={getStatusBadgeClass(log.validation_status)}>
-                      {log.validation_status.charAt(0).toUpperCase() + log.validation_status.slice(1)}
-                    </span>
-                  </td>
-                  <td className="date-cell">
-                    {new Date(log.created_at).toLocaleDateString('en-IN', {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </td>
-                  <td>
-                    <button 
-                      onClick={() => handleViewDetails(log)}
-                      className="btn btn-view-details"
-                      title="View extracted data"
-                    >
-                      👁️ View
-                    </button>
-                  </td>
+        <>
+          <div className="table-wrapper">
+            <table className="verification-table">
+              <thead>
+                <tr>
+                  <th className="checkbox-col">
+                    <input type="checkbox" />
+                  </th>
+                  <th className="doc-id-col">Document ID</th>
+                  <th className="doc-type-col">Document Type</th>
+                  <th className="date-col">Extracted Date</th>
+                  <th className="confidence-col">Confidence</th>
+                  <th className="status-col">Status</th>
+                  <th className="action-col">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Pagination */}
-      {!loading && !error && logs.length > 0 && (
-        <div className="pagination-container">
-          <div className="pagination-info">
-            Showing {Math.min(pagination.skip + 1, pagination.total)}-{Math.min(pagination.skip + pagination.limit, pagination.total)} of {pagination.total}
+              </thead>
+              <tbody>
+                {logs.map((log, index) => (
+                  <tr key={log.id} className="table-row">
+                    <td className="checkbox-col">
+                      <input type="checkbox" />
+                    </td>
+                    <td className="doc-id-col">
+                      <span className="id-link">ID: {log.id}</span>
+                      <button className="copy-btn" title="Copy ID">📋</button>
+                    </td>
+                    <td className="doc-type-col">
+                      <span className="doc-type-pill">{log.document_type.toUpperCase()}</span>
+                    </td>
+                    <td className="date-col">
+                      {new Date(log.created_at).toLocaleDateString('en-IN', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric'
+                      })}
+                    </td>
+                    <td className="confidence-col">
+                      <div className="confidence-score-wrapper">
+                        <span className="confidence-value">{log.confidence_score}</span>
+                      </div>
+                    </td>
+                    <td className="status-col">
+                      <span 
+                        className="status-badge"
+                        style={{ 
+                          backgroundColor: getStatusColor(log.validation_status),
+                          color: 'white'
+                        }}
+                      >
+                        {log.validation_status.charAt(0).toUpperCase() + log.validation_status.slice(1)}
+                      </span>
+                    </td>
+                    <td className="action-col">
+                      <button 
+                        onClick={(e) => handleViewDetails(log, e)}
+                        className="action-btn-view"
+                        title="View details"
+                      >
+                        👁️ View
+                      </button>
+                      <button className="action-menu" title="More options">⋮</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div className="pagination-buttons">
+
+          {/* Pagination */}
+          <div className="pagination-section">
             <button 
-              onClick={handlePreviousPage} 
-              disabled={pagination.skip === 0}
-              className="btn btn-pagination"
+              onClick={handlePreviousPage}
+              disabled={pagination.currentPage === 1}
+              className="btn-pagination prev"
             >
-              ← Previous
+              ❮ Previous
             </button>
+            <div className="page-numbers">
+              {pageNumbers.map(page => (
+                <button
+                  key={page}
+                  onClick={() => handlePageClick(page)}
+                  className={`page-btn ${page === pagination.currentPage ? 'active' : ''}`}
+                >
+                  {page}
+                </button>
+              ))}
+              {endPage < maxPages && <span className="page-ellipsis">...</span>}
+            </div>
             <button 
               onClick={handleNextPage}
-              disabled={(pagination.skip + pagination.limit) >= pagination.total}
-              className="btn btn-pagination"
+              disabled={pagination.currentPage === maxPages}
+              className="btn-pagination next"
             >
-              Next →
+              Next ❯
             </button>
           </div>
-        </div>
+        </>
       )}
 
       {/* Details Modal */}
       {showDetails && selectedLog && (
         <div className={`modal-overlay ${showDetails ? 'active' : ''}`} onClick={handleCloseDetails}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Extraction Details</h2>
-              <button className="modal-close" onClick={handleCloseDetails}>&times;</button>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-header-bar">
+              <h2>Document Details</h2>
+              <button className="modal-close-btn" onClick={handleCloseDetails}>&times;</button>
             </div>
             
-            <div className="modal-body">
-              <div className="detail-section">
+            <div className="modal-content-area">
+              <div className="details-section">
                 <h3>Document Information</h3>
-                <div className="detail-grid">
-                  <div className="detail-item">
+                <div className="detail-row">
+                  <div className="detail-cell">
                     <label>Document ID</label>
                     <span>#{selectedLog.id}</span>
                   </div>
-                  <div className="detail-item">
+                  <div className="detail-cell">
                     <label>Document Type</label>
-                    <span className="doc-type-badge">{selectedLog.document_type.toUpperCase()}</span>
+                    <span>{selectedLog.document_type.toUpperCase()}</span>
                   </div>
-                  <div className="detail-item">
+                </div>
+                <div className="detail-row">
+                  <div className="detail-cell">
                     <label>Confidence Score</label>
-                    <span className={getConfidenceColor(selectedLog.confidence_score)}>
-                      {selectedLog.confidence_score}
-                    </span>
+                    <span>{selectedLog.confidence_score}</span>
                   </div>
-                  <div className="detail-item">
+                  <div className="detail-cell">
                     <label>Validation Status</label>
-                    <span className={`badge badge-${getStatusColor(selectedLog.validation_status)}`}>
+                    <span style={{
+                      color: getStatusColor(selectedLog.validation_status),
+                      fontWeight: '600'
+                    }}>
                       {selectedLog.validation_status.toUpperCase()}
                     </span>
                   </div>
-                  <div className="detail-item">
-                    <label>Extraction Date</label>
+                </div>
+                <div className="detail-row">
+                  <div className="detail-cell">
+                    <label>Extraction Date & Time</label>
                     <span>
                       {new Date(selectedLog.created_at).toLocaleDateString('en-IN', {
                         year: 'numeric',
                         month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit'
-                      })}
+                        day: 'numeric'
+                      })} at {new Date(selectedLog.created_at).toLocaleTimeString('en-IN')}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="detail-section">
-                <h3>Extracted Information</h3>
-                <div className="detail-grid">
+              <div className="details-section">
+                <h3>Extracted Data</h3>
+                <div className="detail-row">
                   {selectedLog.extracted_data?.full_name && (
-                    <div className="detail-item">
+                    <div className="detail-cell">
                       <label>Full Name</label>
                       <span>{selectedLog.extracted_data.full_name}</span>
                     </div>
                   )}
                   {selectedLog.extracted_data?.id_number && (
-                    <div className="detail-item">
+                    <div className="detail-cell">
                       <label>{selectedLog.document_type.toUpperCase()} Number</label>
-                      <span className="masked-text">{selectedLog.extracted_data.id_number}</span>
+                      <span className="monospace">{selectedLog.extracted_data.id_number}</span>
                     </div>
                   )}
+                </div>
+                <div className="detail-row">
                   {selectedLog.extracted_data?.date_of_birth && (
-                    <div className="detail-item">
+                    <div className="detail-cell">
                       <label>Date of Birth</label>
                       <span>{selectedLog.extracted_data.date_of_birth}</span>
                     </div>
                   )}
                   {selectedLog.extracted_data?.gender && (
-                    <div className="detail-item">
+                    <div className="detail-cell">
                       <label>Gender</label>
                       <span>{selectedLog.extracted_data.gender}</span>
                     </div>
                   )}
-                  {selectedLog.extracted_data?.phone && (
-                    <div className="detail-item">
+                </div>
+                {selectedLog.extracted_data?.phone && (
+                  <div className="detail-row full">
+                    <div className="detail-cell">
                       <label>Phone</label>
-                      <span className="masked-text">{selectedLog.extracted_data.phone}</span>
+                      <span className="monospace">{selectedLog.extracted_data.phone}</span>
                     </div>
-                  )}
-                  {selectedLog.extracted_data?.address && (
-                    <div className="detail-item">
+                  </div>
+                )}
+                {selectedLog.extracted_data?.address && (
+                  <div className="detail-row full">
+                    <div className="detail-cell">
                       <label>Address</label>
                       <span>{selectedLog.extracted_data.address}</span>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="modal-footer">
-              <button onClick={handleCloseDetails} className="btn btn-close">Close</button>
+            <div className="modal-footer-area">
+              <button onClick={handleCloseDetails} className="btn-modal-close">Close</button>
             </div>
           </div>
         </div>
