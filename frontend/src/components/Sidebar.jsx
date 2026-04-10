@@ -48,23 +48,18 @@ function Sidebar() {
           <h4 className="section-title">GENERAL</h4>
           <ul>
             <li className={isActive('/dashboard') ? 'active' : ''}>
-              <Link to="/dashboard" onClick={handleLinkClick}>
+              <Link to="/dashboard">
                 <span className="icon">㗊</span> Dashboard
               </Link>
             </li>
             <li className={isActive('/documents') ? 'active' : ''}>
-              <Link to="/documents" onClick={handleLinkClick}>
+              <Link to="/documents">
                 <span className="icon">📄</span> My Documents
               </Link>
             </li>
             <li className={isActive('/logs') ? 'active' : ''}>
-              <Link to="/logs" onClick={handleLinkClick}>
+              <Link to="/logs">
                 <span className="icon">📋</span> Verification History
-              </Link>
-            </li>
-            <li className={isActive('/applications') ? 'active' : ''}>
-              <Link to="/applications" onClick={handleLinkClick}>
-                <span className="icon">🏛️</span> Apply to schemes
               </Link>
             </li>
             <li className={isActive('/schemes') ? 'active' : ''}>
@@ -73,7 +68,7 @@ function Sidebar() {
               </Link>
             </li>
             <li className={isActive('/history') ? 'active' : ''}>
-              <Link to="/history" onClick={handleLinkClick}>
+              <Link to="/history">
                 <span className="icon">📝</span> Application logs
               </Link>
             </li>
@@ -84,17 +79,17 @@ function Sidebar() {
           <h4 className="section-title">SERVICES</h4>
           <ul>
             <li className={isActive('/autofill') ? 'active' : ''}>
-              <Link to="/autofill" onClick={handleLinkClick}>
+              <Link to="/autofill">
                 <span className="icon">⚡</span> Whats new
               </Link>
             </li>
             <li className={isActive('/approvals') ? 'active' : ''}>
-              <Link to="/approvals" onClick={handleLinkClick}>
+              <Link to="/approvals">
                 <span className="icon">✅</span> Approvals
               </Link>
             </li>
             <li className={isActive('/connected-portals') ? 'active' : ''}>
-              <Link to="/connected-portals" onClick={handleLinkClick}>
+              <Link to="/connected-portals">
                 <span className="icon">🔗</span> Connected Portals
               </Link>
             </li>
@@ -105,17 +100,17 @@ function Sidebar() {
           <h4 className="section-title">SETTINGS</h4>
           <ul>
             <li className={isActive('/security') ? 'active' : ''}>
-              <Link to="/security" onClick={handleLinkClick}>
+              <Link to="/security">
                 <span className="icon">🔒</span> Security
               </Link>
             </li>
             <li className={isActive('/privacy') ? 'active' : ''}>
-              <Link to="/privacy" onClick={handleLinkClick}>
+              <Link to="/privacy">
                 <span className="icon">🛡️</span> Data Privacy
               </Link>
             </li>
             <li className={isActive('/help') ? 'active' : ''}>
-              <Link to="/help" onClick={handleLinkClick}>
+              <Link to="/help">
                 <span className="icon">❓</span> Help Center
               </Link>
             </li>
