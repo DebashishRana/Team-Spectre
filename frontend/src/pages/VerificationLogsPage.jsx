@@ -2,7 +2,38 @@ import React, { useState, useEffect } from 'react';
 import './VerificationLogsPage.css';
 
 const VerificationLogsPage = () => {
-  const [logs, setLogs] = useState([]);
+  const [logs, setLogs] = useState([
+    {
+      id: 39635,
+      document_type: 'aadhaar',
+      confidence_score: '94.6%',
+      validation_status: 'valid',
+      created_at: '2024-01-15T10:30:00',
+      extracted_data: {
+        full_name: 'Kristin Watson',
+        id_number: '3818 8009 2292',
+        date_of_birth: '11/10/1987',
+        gender: 'Female',
+        phone: '+91 98765 43210',
+        address: 'Orange, California'
+      }
+    },
+    {
+      id: 22739,
+      document_type: 'pan',
+      confidence_score: '87.3%',
+      validation_status: 'partial',
+      created_at: '2024-01-10T14:45:00',
+      extracted_data: {
+        full_name: 'Theresa Webb',
+        id_number: 'ABCDE1234F',
+        date_of_birth: '02/15/1992',
+        gender: 'Female',
+        phone: '+91 87654 32109',
+        address: 'Fairfield, New York'
+      }
+    }
+  ]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sortBy, setSortBy] = useState('latest');
@@ -21,6 +52,11 @@ const VerificationLogsPage = () => {
   }, [sortBy, pagination.skip]);
 
   const fetchLogs = async () => {
+    setLoading(false); // Use mock data immediately for visualization
+    // For demo: comment out actual API call to use mock data
+    // Uncomment the section below when ready to test with real data
+    
+    /*
     setLoading(true);
     setError(null);
     
@@ -53,6 +89,7 @@ const VerificationLogsPage = () => {
     } finally {
       setLoading(false);
     }
+    */
   };
 
   const getStatusColor = (status) => {
