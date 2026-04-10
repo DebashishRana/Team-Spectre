@@ -36,9 +36,14 @@ class UserAccount(Base):
     email = Column(String(255), unique=True, index=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
     username = Column(String(100), nullable=True)
+    first_name = Column(String(100), nullable=True)
+    last_name = Column(String(100), nullable=True)
+    phone_number = Column(String(20), nullable=True)
     country = Column(String(100), nullable=True)
+    email_verified = Column(Boolean, default=False)
     receive_updates = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class DocumentType(str, enum.Enum):
