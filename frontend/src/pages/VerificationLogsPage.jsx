@@ -295,7 +295,7 @@ const VerificationLogsPage = () => {
                         className="action-btn-view"
                         title="View details"
                       >
-                        👁️ View
+                        View
                       </button>
                       <button className="action-menu" title="More options">⋮</button>
                     </td>
