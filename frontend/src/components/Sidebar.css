@@ -27,10 +27,24 @@
   pointer-events: none;
 }
 
+.sidebar-profile-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  padding: 0 24px 32px 24px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.sidebar-profile-link:hover .sidebar-profile {
+  opacity: 0.8;
+  transform: translateX(4px);
+}
+
 .sidebar-profile {
   display: flex;
   align-items: center;
-  padding: 0 24px 32px 24px;
+  transition: all 0.3s ease;
 }
 
 .profile-image {

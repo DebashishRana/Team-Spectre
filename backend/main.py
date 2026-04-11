@@ -28,7 +28,7 @@ from validators import DocumentValidator
 from config import settings
 from azure_storage import get_azure_storage
 from cloud_sql.db import get_db, UserAccount, init_cloud_sql_db
-from email_verification import send_verification_email, verify_email_code, clear_verification, get_verification_status
+from cloud_sql.models import AuthRequest
 from sqlalchemy.orm import Session
 import logging
 
@@ -160,153 +160,45 @@ app.middleware_stack = None
 async def root():
     return {"message": "Unified Identity portal API", "version": "1.0.0"}
 
-@app.post("/api/auth/send-verification")
-async def send_verification(request: Request):
-    """Send verification email to user"""
-    try:
-        data = await request.json()
-        email = data.get("email")
-        first_name = data.get("first_name")
-        last_name = data.get("last_name")
-        
-        if not all([email, first_name, last_name]):
-            raise HTTPException(status_code=400, detail="Missing required fields")
-        
-        # Send verification email
-        if send_verification_email(email, first_name, last_name):
-            return {
-                "success": True, 
-                "message": f"Verification code sent to {email}",
-                "email": email
-            }
-        else:
-            raise HTTPException(status_code=500, detail="Failed to send verification email")
-            
-    except Exception as e:
-        logging.error(f"Error in send_verification: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/auth/verify-email")
-async def verify_email(request: Request):
-    """Verify email with code"""
-    try:
-        data = await request.json()
-        email = data.get("email")
-        code = data.get("code")
-        
-        if not email or not code:
-            raise HTTPException(status_code=400, detail="Missing email or code")
-        
-        # Verify the code
-        if verify_email_code(email, code):
-            return {
-                "success": True,
-                "message": "Email verified successfully",
-                "email": email
-            }
-        else:
-            raise HTTPException(status_code=400, detail="Invalid or expired verification code")
-            
-    except Exception as e:
-        logging.error(f"Error in verify_email: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
 @app.post("/api/auth/register")
-async def register_user(request: Request, db: Session = Depends(get_db)):
-    """Register a new user after email verification"""
+async def register_user(request: AuthRequest, db: Session = Depends(get_db)):
+    if not db:
+        raise HTTPException(status_code=500, detail="Database connection failed")
+    
+    existing_user = db.query(UserAccount).filter(UserAccount.email == request.email).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+        
+    hashed_password = request.password # Use proper hashing in prod
+    
+    new_user = UserAccount(
+        email=request.email,
+        password_hash=hashed_password,
+        username=request.username,
+        country=request.country,
+        receive_updates=request.receive_updates
+    )
+    
     try:
-        if not db:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-        
-        data = await request.json()
-        email = data.get("email")
-        password = data.get("password")
-        username = data.get("username")
-        first_name = data.get("first_name")
-        last_name = data.get("last_name")
-        phone_number = data.get("phone_number")
-        country = data.get("country", "India")
-        receive_updates = data.get("receive_updates", False)
-        
-        # Verify email was verified
-        verification_status = get_verification_status(email)
-        if not verification_status or not verification_status.get("verified"):
-            raise HTTPException(status_code=400, detail="Email not verified")
-        
-        # Check if email already registered
-        existing_user = db.query(UserAccount).filter(UserAccount.email == email).first()
-        if existing_user:
-            raise HTTPException(status_code=400, detail="Email already registered")
-        
-        # Create new user
-        new_user = UserAccount(
-            email=email,
-            password_hash=password,  # Use proper hashing in production
-            username=username,
-            first_name=first_name,
-            last_name=last_name,
-            phone_number=phone_number,
-            country=country,
-            receive_updates=receive_updates,
-            email_verified=True,
-            created_at=datetime.utcnow()
-        )
-        
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
-        
-        # Clear verification record
-        clear_verification(email)
-        
-        return {
-            "success": True,
-            "message": "User registered successfully",
-            "user_id": new_user.id,
-            "email": new_user.email
-        }
-    except HTTPException:
-        raise
+        return {"success": True, "message": "User registered successfully", "user_id": new_user.id}
     except Exception as e:
         db.rollback()
         logging.error(f"Error registering user: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to register user: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to register user")
 
 @app.post("/api/auth/login")
-async def login_user(request: Request, db: Session = Depends(get_db)):
-    """Login user"""
-    try:
-        if not db:
-            raise HTTPException(status_code=500, detail="Database connection failed")
+async def login_user(request: AuthRequest, db: Session = Depends(get_db)):
+    if not db:
+        raise HTTPException(status_code=500, detail="Database connection failed")
         
-        data = await request.json()
-        email = data.get("email")
-        password = data.get("password")
+    user = db.query(UserAccount).filter(UserAccount.email == request.email).first()
+    if not user or user.password_hash != request.password: # Should verify against hashed password
+        raise HTTPException(status_code=401, detail="Invalid email or password")
         
-        if not email or not password:
-            raise HTTPException(status_code=400, detail="Missing email or password")
-            
-        user = db.query(UserAccount).filter(UserAccount.email == email).first()
-        if not user or user.password_hash != password:  # Should verify against hashed password
-            raise HTTPException(status_code=401, detail="Invalid email or password")
-        
-        # Check if email is verified
-        if not getattr(user, 'email_verified', False):
-            raise HTTPException(status_code=403, detail="Email not verified")
-            
-        return {
-            "success": True,
-            "message": "Login successful",
-            "user_id": user.id,
-            "email": user.email,
-            "first_name": getattr(user, 'first_name', ''),
-            "last_name": getattr(user, 'last_name', '')
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        logging.error(f"Error in login: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return {"success": True, "message": "Login successful", "user_id": user.id, "email": user.email}
 
 from cloud_sql.aadhaar_ocr import extract_aadhaar_details
 import tempfile
@@ -1365,5 +1257,5 @@ async def validate_document_endpoint(
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=5000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 

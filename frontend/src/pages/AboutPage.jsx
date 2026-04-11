@@ -167,7 +167,7 @@ npm run dev`}
           <section className="about-section">
             <h2>API Documentation</h2>
             <p>
-              The API is available at <code>http://localhost:8000</code> when the
+              The API is available at <code>http://localhost:5000</code> when the
               backend is running. All endpoints require Bearer token authentication.
             </p>
             <div className="api-endpoints">

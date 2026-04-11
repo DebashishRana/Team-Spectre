@@ -62,7 +62,7 @@ const VerificationLogsPage = () => {
     
     try {
       const userId = localStorage.getItem('user_id') || 1;
-      let url = `http://localhost:8000/api/user-extraction-logs/${userId}?skip=${pagination.skip}&limit=${pagination.limit}`;
+      let url = `http://localhost:5000/api/user-extraction-logs/${userId}?skip=${pagination.skip}&limit=${pagination.limit}`;
       
       const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch logs');

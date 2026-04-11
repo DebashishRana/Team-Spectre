@@ -8,6 +8,9 @@ import AdminPage from './pages/AdminPage'
 import AboutPage from './pages/AboutPage'
 import AuthPage from './pages/AuthPage'
 import VerificationLogsPage from './pages/VerificationLogsPage'
+import ProfilePage from './pages/ProfilePage'
+import ApprovalsPage from './pages/ApprovalsPage'
+import ConnectedPortalsPage from './pages/ConnectedPortalsPage'
 import './App.css'
 
 function AppContent() {
@@ -33,12 +36,15 @@ function AppContent() {
       <Sidebar />
       <main className="main-content">
         <Routes>
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/scan" element={<ScannerPage />} />
           <Route path="/schemes" element={<SchemesPage />} />
           <Route path="/logs" element={<VerificationLogsPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/approvals" element={<ApprovalsPage />} />
+          <Route path="/connected-portals" element={<ConnectedPortalsPage />} />
         </Routes>
       </main>
     </div>

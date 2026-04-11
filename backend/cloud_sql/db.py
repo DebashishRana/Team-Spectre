@@ -5,29 +5,41 @@ from datetime import datetime
 import json
 import logging
 import enum
+import os
 
 from config import settings
 
-# Build URL via SQLAlchemy helper so special characters in password are escaped safely.
-DB_URL = URL.create(
-    "mysql+pymysql",
-    username=settings.GCP_SQL_USER,
-    password=settings.GCP_SQL_PASSWORD,
-    host=settings.GCP_SQL_PUBLIC_IP,
-    port=settings.GCP_SQL_PORT,
-    database=settings.GCP_SQL_DB_NAME,
-    query={"charset": "utf8mb4"},
-)
+# Use SQLite for local development, Cloud SQL for production
+USE_LOCAL_DB = os.getenv("USE_LOCAL_DB", "true").lower() == "true"
 
-try:
-    engine = create_engine(DB_URL, pool_recycle=3600, echo=False)
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    Base = declarative_base()
-except Exception as e:
-    logging.error(f"Failed to initialize Google Cloud SQL engine: {e}")
-    engine = None
-    SessionLocal = None
-    Base = declarative_base()
+if USE_LOCAL_DB:
+    # Local SQLite database for development
+    DB_URL = "sqlite:///./unified_identity_portal.db"
+    engine = create_engine(DB_URL, connect_args={"check_same_thread": False}, echo=False)
+    logging.info("Using local SQLite database for development")
+else:
+    # Build URL via SQLAlchemy helper so special characters in password are escaped safely.
+    DB_URL = URL.create(
+        "mysql+pymysql",
+        username=settings.GCP_SQL_USER,
+        password=settings.GCP_SQL_PASSWORD,
+        host=settings.GCP_SQL_PUBLIC_IP,
+        port=settings.GCP_SQL_PORT,
+        database=settings.GCP_SQL_DB_NAME,
+        query={"charset": "utf8mb4"},
+    )
+    
+    try:
+        engine = create_engine(DB_URL, pool_recycle=3600, echo=False)
+        logging.info("Using Cloud SQL database")
+    except Exception as e:
+        logging.error(f"Failed to initialize Google Cloud SQL engine: {e}")
+        logging.info("Falling back to SQLite database")
+        DB_URL = "sqlite:///./unified_identity_portal.db"
+        engine = create_engine(DB_URL, connect_args={"check_same_thread": False}, echo=False)
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
 
 class UserAccount(Base):
     __tablename__ = "users"

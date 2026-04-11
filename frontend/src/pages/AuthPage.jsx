@@ -22,6 +22,8 @@ function AuthPage() {
   const [loading, setLoading] = useState(false)
   
   const [showWhatsIncluded, setShowWhatsIncluded] = useState(false)
+  const [verificationStep, setVerificationStep] = useState('personal')
+  const [verificationCode, setVerificationCode] = useState('')
   const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
@@ -101,13 +103,24 @@ function AuthPage() {
         
         if (response.ok) {
           console.log('Registration successful:', data);
+          
+          // Save user details in JSON format for the auto-fill feature
+          const userProfileData = {
+            firstName: firstName,
+            lastName: lastName,
+            phoneNumber: phoneNumber,
+            aadhaarCard: "",
+            maritalStatus: ""
+          };
+          localStorage.setItem('userProfile', JSON.stringify(userProfileData));
+          
           navigate('/dashboard');
         } else {
           setError(data.detail || 'Registration failed');
         }
       } catch (error) {
         console.error('Error during registration:', error);
-        setError('Error connecting to server. Make sure backend is running on port 5000');
+        setError('Error connecting to server. Make sure backend is running on port 8080');
       } finally {
         setLoading(false)
       }

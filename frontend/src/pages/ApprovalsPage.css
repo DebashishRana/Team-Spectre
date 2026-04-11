@@ -1,0 +1,138 @@
+.approvals-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 32px 0;
+}
+
+.approvals-header {
+  margin-bottom: 40px;
+}
+
+.approvals-header h1 {
+  font-size: 32px;
+  color: #333;
+  margin: 0 0 8px 0;
+  font-weight: 600;
+}
+
+.approvals-header p {
+  font-size: 16px;
+  color: #666;
+  margin: 0;
+}
+
+.approvals-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  color: white;
+  padding: 40px;
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.empty-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+  animation: check-pulse 0.6s ease-in-out;
+}
+
+@keyframes check-pulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.approvals-empty h2 {
+  font-size: 24px;
+  margin: 0 0 12px 0;
+  font-weight: 600;
+}
+
+.approvals-empty p {
+  font-size: 16px;
+  margin: 8px 0;
+  opacity: 0.9;
+}
+
+.empty-subtitle {
+  font-size: 14px;
+  opacity: 0.7;
+  margin-top: 16px;
+}
+
+.approval-info-card {
+  background: white;
+  border-radius: 12px;
+  padding: 28px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.approval-info-card h3 {
+  font-size: 18px;
+  color: #333;
+  margin: 0 0 20px 0;
+  font-weight: 600;
+}
+
+.approval-info-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.approval-info-card li {
+  font-size: 15px;
+  color: #555;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+  position: relative;
+  padding-left: 28px;
+}
+
+.approval-info-card li:last-child {
+  border-bottom: none;
+}
+
+.approval-info-card li:before {
+  content: "→";
+  position: absolute;
+  left: 0;
+  color: #667eea;
+  font-weight: bold;
+}
+
+@media (max-width: 768px) {
+  .approvals-container {
+    padding: 16px;
+  }
+
+  .approvals-header h1 {
+    font-size: 24px;
+  }
+
+  .approvals-empty {
+    min-height: 250px;
+    padding: 24px;
+  }
+
+  .empty-icon {
+    font-size: 48px;
+  }
+
+  .approvals-empty h2 {
+    font-size: 20px;
+  }
+}

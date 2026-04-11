@@ -31,9 +31,11 @@ function DashboardPage() {
     formData.append('file', file);
 
     try {
-      const response = await fetch('http://localhost:8000/api/extract-aadhaar', {
+      const response = await fetch('http://localhost:8080/api/extract-aadhaar', {
         method: 'POST',
-        // Optional Authorization: 'Bearer ...'
+        headers: {
+          'Authorization': 'Bearer Unified Identity portal-secret-token-change-in-production'
+        },
         body: formData
       });
       const data = await response.json();
@@ -41,6 +43,26 @@ function DashboardPage() {
         setOcrClassification(data.classification || null);
         setOcrValidation(data.validation || null);
         setOcrData(data.data);
+        
+        // Update userProfile in localStorage with OCR data
+        try {
+          const savedProfile = JSON.parse(localStorage.getItem('userProfile')) || {};
+          if (data.data) {
+            // Handle both array and single value formats for aadhaar
+            const aadhaarNum = Array.isArray(data.data.aadhaar_numbers) 
+              ? data.data.aadhaar_numbers[0] 
+              : data.data.aadhaar_number || data.data.aadhaar_numbers;
+            
+            savedProfile.aadhaarCard = aadhaarNum || '';
+            savedProfile.name = data.data.holder_name || data.data.name || '';
+            savedProfile.dob = data.data.date_of_birth || data.data.dob || '';
+            savedProfile.address = data.data.address || '';
+            localStorage.setItem('userProfile', JSON.stringify(savedProfile));
+            console.log('Updated userProfile via OCR', savedProfile);
+          }
+        } catch(e) {
+          console.error('Failed to update userProfile in localStorage', e);
+        }
       } else {
         const detail = data?.detail;
         const message = typeof detail === 'string'
@@ -51,7 +73,7 @@ function DashboardPage() {
         setOcrError(message);
       }
     } catch (err) {
-      console.error(err);
+      console.error('Upload error:', err);
       setOcrError('Network error connecting to API');
     } finally {
       setOcrLoading(false);
@@ -398,7 +420,14 @@ function DashboardPage() {
                   </td>
                   <td>
                     <div className="action-buttons">
-                      <button className="icon-btn-sm">👁️</button>
+                      <button className="icon-btn-sm" title="View Document">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display: 'inline-block'}}>
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                          <polyline points="14 2 14 8 20 8"></polyline>
+                          <rect x="7" y="13" width="10" height="5" rx="1"></rect>
+                          <path d="M12 16v2"></path>
+                        </svg>
+                      </button>
                       <button className="icon-btn-sm">⋮</button>
                     </div>
                   </td>

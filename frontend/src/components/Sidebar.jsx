@@ -33,15 +33,17 @@ function Sidebar() {
 
   return (
     <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
-      <div className="sidebar-profile">
-        <div className="profile-image">
-          <img src="/logo.webp" alt="User" />
+      <Link to="/profile" className="sidebar-profile-link">
+        <div className="sidebar-profile">
+          <div className="profile-image">
+            <img src="/logo.webp" alt="User" />
+          </div>
+          <div className="profile-info">
+            <h3>Profile</h3>
+            <p>APPID:AEK9718EAD</p>
+          </div>
         </div>
-        <div className="profile-info">
-          <h3>Profile</h3>
-          <p>APPID:AEK9718EAD</p>
-        </div>
-      </div>
+      </Link>
 
       <nav className="sidebar-nav">
         <div className="nav-section">
