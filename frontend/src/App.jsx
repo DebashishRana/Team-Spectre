@@ -11,6 +11,7 @@ import VerificationLogsPage from './pages/VerificationLogsPage'
 import ProfilePage from './pages/ProfilePage'
 import ApprovalsPage from './pages/ApprovalsPage'
 import ConnectedPortalsPage from './pages/ConnectedPortalsPage'
+import PrivacyPage from './pages/PrivacyPage'
 import './App.css'
 
 function AppContent() {
@@ -37,6 +38,7 @@ function AppContent() {
       <main className="main-content">
         <Routes>
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/scan" element={<ScannerPage />} />
           <Route path="/schemes" element={<SchemesPage />} />

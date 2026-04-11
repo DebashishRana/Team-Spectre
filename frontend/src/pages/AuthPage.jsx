@@ -34,7 +34,7 @@ function AuthPage() {
     if (isLogin) {
       // Login logic
       try {
-        const response = await fetch('http://localhost:5000/api/auth/login', {
+        const response = await fetch('http://localhost:8080/api/auth/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -56,7 +56,7 @@ function AuthPage() {
         }
       } catch (error) {
         console.error('Error during login:', error);
-        setError('Error connecting to server. Make sure backend is running on port 5000');
+        setError('Error connecting to server. Make sure backend is running on port 8080');
       } finally {
         setLoading(false)
       }
@@ -81,7 +81,7 @@ function AuthPage() {
       }
 
       try {
-        const response = await fetch('http://localhost:5000/api/auth/register', {
+        const response = await fetch('http://localhost:8080/api/auth/register', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
